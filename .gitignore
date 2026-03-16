@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Fix #6: Prevent debug/recovery/build artifacts from ever being committed
+build_*.txt
+tsc_*.txt
+*_output.txt
+nul
+recovery_*.tsx
+recovery_*.txt
+list_models*.js
+models_output*.txt
+metadata.json
+
+# Next.js
+.next/
+out/
+
+# Sentry
+.sentryclirc
+
+# Environment files (redundant with *.local but explicit)
+.env*.local
+!.env.local.example

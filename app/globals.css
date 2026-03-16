@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-muted: var(--muted);
+  --color-muted-dark: var(--muted-dark);
+}
+
+:root {
+  --muted: #6b7280;
+  --muted-dark: #9ca3af;
+}
+
+@layer base {
+  * {
+    @apply border-gray-200 dark:border-neutral-800;
+  }
+  body {
+    @apply bg-white dark:bg-black text-black dark:text-white;
+  }
+}
+
+.font-inter {
+  font-family: var(--font-inter), sans-serif;
+}
+
+.font-outfit {
+  font-family: var(--font-outfit), sans-serif;
+}
+
+/* Hide browser default password visibility toggle and clear button */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

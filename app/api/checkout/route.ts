@@ -1,0 +1,142 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import * as Sentry from '@sentry/nextjs'
+import { logger } from '@/lib/logger'
+import { checkoutLimiter, applyRateLimit } from '@/lib/rateLimit'
+
+// ── Fix #2: Whitelist of valid Polar product IDs ───────────────────
+const VALID_PRODUCT_IDS = new Set(
+  [
+    process.env.NEXT_PUBLIC_POLAR_STARTER_MONTHLY_ID,
+    process.env.NEXT_PUBLIC_POLAR_STARTER_YEARLY_ID,
+    process.env.NEXT_PUBLIC_POLAR_PROFESSIONAL_MONTHLY_ID,
+    process.env.NEXT_PUBLIC_POLAR_PROFESSIONAL_YEARLY_ID,
+  ].filter(Boolean)
+)
+
+export async function POST(req: NextRequest) {
+  try {
+    // ── Fix #2: Authentication ─────────────────────────────────────
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.replace('Bearer ', '')
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    )
+
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // ── Fix #3: Rate Limiting ──────────────────────────────────────
+    const rateLimitResponse = await applyRateLimit(checkoutLimiter, user.id)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // ── Parse & validate request body ──────────────────────────────
+    const { productId, successUrl, cancelUrl } = await req.json()
+
+    if (!productId) {
+      return NextResponse.json(
+        { error: 'Product ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // ── Fix #2: Whitelist check — reject unknown product IDs ───────
+    if (VALID_PRODUCT_IDS.size > 0 && !VALID_PRODUCT_IDS.has(productId)) {
+      logger.warn('[checkout] Invalid product ID attempted', {
+        userId: user.id,
+        productId
+      })
+      return NextResponse.json(
+        { error: 'Invalid product ID' },
+        { status: 400 }
+      )
+    }
+
+    const polarToken = process.env.POLAR_ORGANIZATION_TOKEN
+    if (!polarToken) {
+      logger.error('[checkout] POLAR_ORGANIZATION_TOKEN not configured')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    logger.info('[checkout] Creating checkout session', {
+      userId: user.id,
+      productId
+    })
+
+    // ── Fix #7B: 15-second timeout for Polar API ───────────────────
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15_000)
+
+    let polarResponse: Response
+    try {
+      polarResponse = await fetch('https://api.polar.sh/v1/checkouts/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${polarToken}`
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          customer_email: user.email,
+          metadata: {
+            // Fix #2: ALWAYS use server-derived user ID, never trust client
+            user_id: user.id
+          }
+        }),
+        signal: controller.signal
+      })
+    } catch (err: unknown) {
+      const fetchErr = err instanceof Error ? err : new Error(String(err))
+      if (fetchErr.name === 'AbortError') {
+        return NextResponse.json(
+          { error: 'Checkout service timed out. Please try again.' },
+          { status: 504 }
+        )
+      }
+      throw fetchErr
+    } finally {
+      clearTimeout(timeoutId)
+    }
+
+    const data = await polarResponse.json()
+
+    if (!polarResponse.ok) {
+      logger.error('[checkout] Polar API error', {
+        status: polarResponse.status,
+        detail: data.detail
+      })
+      return NextResponse.json(
+        { error: data.detail || 'Failed to create checkout session' },
+        { status: polarResponse.status }
+      )
+    }
+
+    logger.info('[checkout] Session created', { userId: user.id })
+    return NextResponse.json({ url: data.url })
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error))
+    logger.error('[checkout] Server error', { error: err.message })
+    Sentry.captureException(err)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
