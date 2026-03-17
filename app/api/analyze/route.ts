@@ -151,16 +151,16 @@ export async function POST(req: NextRequest) {
       { name: 'gemini-2.5-flash', version: 'v1beta' as const },
       { name: 'gemini-2.0-flash', version: 'v1beta' as const },
       { name: 'gemini-1.5-flash', version: 'v1beta' as const },
-      { name: 'gemini-1.5-pro', version: 'v1beta' as const },
     ]
 
     let lastError: Error | null = null
 
     for (const { name: modelName, version: apiVersion } of modelsToTry) {
       try {
-        logger.info('[analyze] Trying model', { model: modelName, apiVersion })
+        logger.info('[analyze] Trying model with search', { model: modelName, apiVersion })
 
-        const model = genAI.getGenerativeModel(
+        // ── Attempt 1: With Search Tool ───────────────────────────
+        const modelWithSearch = genAI.getGenerativeModel(
           {
             model: modelName,
             systemInstruction: SYSTEM_INSTRUCTION,
@@ -171,16 +171,36 @@ export async function POST(req: NextRequest) {
 
         const prompt = `Analyze the following query for competitive weaknesses and opportunities: "${trimmedQuery}"\n\nRemember: Respond with ONLY valid JSON.`
 
-        // ── Fix #7A: 30-second timeout via AbortController ─────────
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30_000)
+        const timeoutId = setTimeout(() => controller.abort(), 45_000) // Slightly longer for search
 
         try {
-          const result = await model.generateContent({
+          const result = await modelWithSearch.generateContent({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
           })
           response = result.response as typeof response
           usedModel = modelName
+        } catch (searchErr: any) {
+          // ── Fallback: If ANY error occurs with search, try WITHOUT search ──
+          // This handles 429s (Quota) AND 404s (Search not enabled for this API key tier)
+          logger.warn('[analyze] Search failed, retrying without search', { 
+            model: modelName, 
+            error: searchErr.message?.substring(0, 100) 
+          })
+          
+          const modelNoSearch = genAI.getGenerativeModel(
+            {
+              model: modelName,
+              systemInstruction: SYSTEM_INSTRUCTION
+            },
+            { apiVersion }
+          )
+
+          const fallbackResult = await modelNoSearch.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          })
+          response = fallbackResult.response as typeof response
+          usedModel = `${modelName} (no-search)`
         } finally {
           clearTimeout(timeoutId)
         }
@@ -193,13 +213,13 @@ export async function POST(req: NextRequest) {
         lastError = err instanceof Error ? err : new Error(String(err))
         const msg = lastError.message
 
+        // ── Fix: Only fall back on 404/500/etc, not 429 ─────────────
         const isRecoverable =
-          msg.includes('429') ||
-          msg.includes('quota') ||
           msg.includes('404') ||
           msg.includes('not found') ||
           msg.includes('400') ||
-          msg.includes('Bad Request')
+          msg.includes('Bad Request') ||
+          msg.includes('500')
 
         if (isRecoverable) {
           logger.warn('[analyze] Model failed, trying next', {
