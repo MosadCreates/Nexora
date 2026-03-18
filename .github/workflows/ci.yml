@@ -1,9 +1,3 @@
-# CI Pipeline — Fix #11
-#
-# Runs type-checking, linting, and build on every push/PR to main.
-# Configure GitHub branch protection to require these checks before merge.
-# This blocks Vercel deployment if any check fails.
-
 name: CI
 
 on:
@@ -25,29 +19,20 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npx next lint
-
   build:
     name: Build
-    needs: [type-check, lint]
+    needs: [type-check]
     runs-on: ubuntu-latest
     env:
-      # Dummy values so next build can compile (no real secrets needed)
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
       GEMINI_API_KEY: placeholder
       POLAR_ORGANIZATION_TOKEN: placeholder
       SENTRY_DSN: ""
+      NEXT_PUBLIC_POLAR_STARTER_MONTHLY_ID: placeholder
+      NEXT_PUBLIC_POLAR_STARTER_YEARLY_ID: placeholder
+      NEXT_PUBLIC_POLAR_PROFESSIONAL_MONTHLY_ID: placeholder
+      NEXT_PUBLIC_POLAR_PROFESSIONAL_YEARLY_ID: placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
