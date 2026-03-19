@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // ── Routes that require authentication ──────────────────────────────
@@ -50,19 +50,17 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
-          // Set cookies on the request for subsequent middleware/routes
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          // Also set on the response so they reach the browser
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+  cookiesToSet.forEach(({ name, value }: { name: string; value: string }) =>
+    request.cookies.set(name, value)
+  )
+  response = NextResponse.next({
+    request: { headers: request.headers },
+  })
+  cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options: CookieOptions }) =>
+    response.cookies.set(name, value, options)
+  )
+},
       },
     }
   )
