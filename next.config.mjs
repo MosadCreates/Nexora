@@ -24,9 +24,6 @@ const nextConfig = {
       },
     ]
   },
-  experimental: {
-    proxyPrefetch: true,
-  },
   // Fix #4: TypeScript errors must now be fixed before deploy.
   // ignoreBuildErrors has been REMOVED intentionally.
 };
