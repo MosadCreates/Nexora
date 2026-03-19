@@ -34,5 +34,4 @@ export default withSentryConfig(nextConfig, {
   project: process.env.SENTRY_PROJECT || 'nexora-web',
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  disableLogger: true,
 });
