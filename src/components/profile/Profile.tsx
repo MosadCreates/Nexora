@@ -240,6 +240,36 @@ const Profile: React.FC = () => {
                       <span className={cn('px-2 py-1 rounded-md border', currentPlan === 'starter' ? 'text-purple-500 border-purple-500/10 bg-purple-500/5' : 'border-neutral-200 dark:border-white/5')}>Starter</span>
                       <span className={cn('px-2 py-1 rounded-md border', (currentPlan === 'professional' || currentPlan === 'enterprise') ? 'text-purple-500 border-purple-500/10 bg-purple-500/5' : 'border-neutral-200 dark:border-white/5')}>Professional</span>
                     </div>
+
+                    {/* Fix #8: Next billing date */}
+                    {subscription?.current_period_end && subscription.status === 'active' && !subscription.cancel_at_period_end && (
+                      <div className='flex items-center justify-between py-2 border-t border-neutral-200/50 dark:border-white/5 mt-3'>
+                        <span className='text-[10px] font-bold uppercase tracking-widest text-neutral-400'>Next billing</span>
+                        <span className='text-xs font-medium text-neutral-600 dark:text-neutral-300'>
+                          {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Fix #8: Canceled grace period notice */}
+                    {subscription?.status === 'canceled' && subscription?.current_period_end && (
+                      <div className='bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mt-3'>
+                        <p className='text-[11px] text-amber-700 dark:text-amber-300'>
+                          Your subscription is canceled. Access continues until{' '}
+                          <strong>
+                            {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </strong>
+                        </p>
+                      </div>
+                    )}
                     <div className='pt-4 grid grid-cols-2 gap-3'>
                       {subscription?.status === 'active' && !subscription?.cancel_at_period_end ? (
                         <button 

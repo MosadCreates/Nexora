@@ -33,6 +33,10 @@ export const AnalysisPage: React.FC = () => {
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // Fix #5: Post-checkout success UX
+  const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
+  const [processingPayment, setProcessingPayment] = useState(false)
+
   // Dashboard state
   const [analyses, setAnalyses] = useState<any[]>([])
   const [loadingAnalyses, setLoadingAnalyses] = useState(true)
@@ -109,6 +113,31 @@ export const AnalysisPage: React.FC = () => {
       fetchRecentAnalyses()
     }
   }, [profile?.id])
+
+  // Fix #5: Handle ?checkout=success query param
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      setProcessingPayment(true)
+      // Remove param from URL without reload
+      window.history.replaceState({}, '', '/analysis')
+
+      // Show processing state, then transition to success after 2s
+      const timeout = setTimeout(() => {
+        setProcessingPayment(false)
+        setShowCheckoutSuccess(true)
+      }, 2000)
+
+      return () => clearTimeout(timeout)
+    }
+  }, [searchParams])
+
+  // Fix #5: When plan upgrades from hobby, transition to success immediately
+  useEffect(() => {
+    if (processingPayment && effectivePlan !== 'hobby') {
+      setProcessingPayment(false)
+      setShowCheckoutSuccess(true)
+    }
+  }, [effectivePlan, processingPayment])
 
 
 
@@ -207,6 +236,37 @@ export const AnalysisPage: React.FC = () => {
         profile={profile}
         credits={remainingCredits}
       />
+
+      {/* Fix #5: Post-checkout banners */}
+      {processingPayment && (
+        <div className='max-w-4xl mx-auto px-4 pt-24 pb-4'>
+          <div className='bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center gap-3'>
+            <div className='animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0' />
+            <p className='text-blue-700 dark:text-blue-300 font-medium text-sm'>
+              Processing your payment... Your plan will activate shortly.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showCheckoutSuccess && (
+        <div className='max-w-4xl mx-auto px-4 pt-24 pb-4'>
+          <div className='bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              <span className='text-green-500 text-xl'>✓</span>
+              <p className='text-green-700 dark:text-green-300 font-medium text-sm'>
+                Payment successful! Your plan has been upgraded.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCheckoutSuccess(false)}
+              className='text-green-500 hover:text-green-700 dark:hover:text-green-300 text-lg leading-none'
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {step === AnalysisStep.IDLE && !searchParams.get('q') ? (
         <>

@@ -43,6 +43,7 @@ export function Footer () {
               <p className="font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2">Legal</p>
               <Link href='/privacy' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Privacy</Link>
               <Link href='/terms' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Terms</Link>
+              <Link href='/refund' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Refund Policy</Link>
             </div>
             <div className='flex flex-col space-y-4'>
               <p className="font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2">Social</p>

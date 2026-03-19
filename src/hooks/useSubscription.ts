@@ -24,20 +24,16 @@ export function useSubscription() {
 
     async function fetchSubscription() {
       try {
-        console.log('📡 [useSubscription] Fetching user session for subscription check...');
-        
         // Use a timeout for getUser() - increased to 15s for better resilience
         const getUserPromise = supabase.auth.getUser();
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Auth user fetch timeout (15s)')), 15000)
         );
 
-        console.log('⏳ [useSubscription] Waiting for auth user...');
         const result = await Promise.race([getUserPromise, timeoutPromise]);
         const { data: { user } } = result as any;
         
         if (!user) {
-          console.log('ℹ️ [useSubscription] No user found, skip sub fetch');
           setLoading(false)
           return
         }

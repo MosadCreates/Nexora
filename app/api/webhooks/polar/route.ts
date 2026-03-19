@@ -2,30 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
 import { logger } from '@/lib/logger'
-
-// ── Product ID → Plan slug mapping ──────────────────────────────────
-function resolvePlanSlug(productId: string): string {
-  const mapping: Record<string, string> = {}
-
-  const ids = {
-    starter: [
-      process.env.NEXT_PUBLIC_POLAR_STARTER_MONTHLY_ID,
-      process.env.NEXT_PUBLIC_POLAR_STARTER_YEARLY_ID,
-    ],
-    professional: [
-      process.env.NEXT_PUBLIC_POLAR_PROFESSIONAL_MONTHLY_ID,
-      process.env.NEXT_PUBLIC_POLAR_PROFESSIONAL_YEARLY_ID,
-    ],
-  }
-
-  for (const [plan, envIds] of Object.entries(ids)) {
-    for (const id of envIds) {
-      if (id) mapping[id] = plan
-    }
-  }
-
-  return mapping[productId] || 'starter'
-}
+import { getProductPlanSlug } from '@/lib/planUtils'
 
 // ── Supabase admin client (service role) ────────────────────────────
 function getAdminClient() {
@@ -205,7 +182,19 @@ export async function POST(req: NextRequest) {
           throw new Error('No user_id in webhook metadata')
         }
         const fields = extractSubscriptionFields(data)
-        const planSlug = resolvePlanSlug(fields.productId)
+        const planSlug = getProductPlanSlug(fields.productId)
+
+        // Fix #3: Reject unknown product IDs
+        if (!planSlug) {
+          logger.warn('[webhook] subscription.created — unknown product ID', {
+            productId: fields.productId,
+          })
+          await recordEvent(admin, eventId, event.type, event, 'ignored', 'Unknown product ID')
+          return NextResponse.json(
+            { received: true, warning: 'Unknown product ID — ignored' },
+            { status: 200 }
+          )
+        }
 
         await upsertSubscription(admin, {
           userId,
@@ -225,14 +214,34 @@ export async function POST(req: NextRequest) {
         break
       }
 
-      // ── Subscription Updated ─────────────────────────────────────
+      // ── Subscription Updated (includes renewals) ─────────────────
       case 'subscription.updated': {
         if (!userId) {
           throw new Error('No user_id in webhook metadata')
         }
         const fields = extractSubscriptionFields(data)
-        const planSlug = resolvePlanSlug(fields.productId)
+        const planSlug = getProductPlanSlug(fields.productId)
+
+        // Fix #3: Reject unknown product IDs
+        if (!planSlug) {
+          logger.warn('[webhook] subscription.updated — unknown product ID', {
+            productId: fields.productId,
+          })
+          await recordEvent(admin, eventId, event.type, event, 'ignored', 'Unknown product ID')
+          return NextResponse.json(
+            { received: true, warning: 'Unknown product ID — ignored' },
+            { status: 200 }
+          )
+        }
+
         const status = (data.status as string) || 'active'
+
+        // Fix #1: Get existing subscription to detect period renewal
+        const { data: existingSub } = await admin
+          .from('subscriptions')
+          .select('current_period_start')
+          .eq('user_id', userId)
+          .maybeSingle()
 
         await upsertSubscription(admin, {
           userId,
@@ -245,7 +254,74 @@ export async function POST(req: NextRequest) {
           cancelAtPeriodEnd: (data.cancel_at_period_end as boolean) ?? false,
         })
 
-        logger.info('[webhook] Subscription updated', { userId, planSlug, status })
+        // Fix #1: Reset credits if billing period has changed (renewal)
+        const isRenewal =
+          existingSub?.current_period_start &&
+          fields.currentPeriodStart &&
+          existingSub.current_period_start !== fields.currentPeriodStart
+
+        if (isRenewal) {
+          await resetCredits(admin, userId)
+          logger.info('[webhook] Credits reset on renewal', { userId, planSlug })
+        }
+
+        logger.info('[webhook] Subscription updated', { userId, planSlug, status, isRenewal: !!isRenewal })
+        break
+      }
+
+      // ── Subscription Active (renewal confirmation from Polar) ────
+      case 'subscription.active': {
+        if (!userId) {
+          logger.warn('[webhook] subscription.active missing user_id')
+          break
+        }
+        const fields = extractSubscriptionFields(data)
+        const planSlug = getProductPlanSlug(fields.productId)
+
+        if (!planSlug) {
+          logger.warn('[webhook] subscription.active — unknown product ID', {
+            productId: fields.productId,
+          })
+          break
+        }
+
+        await upsertSubscription(admin, {
+          userId,
+          polarSubscriptionId: fields.polarSubscriptionId,
+          polarCustomerId: fields.polarCustomerId,
+          planSlug,
+          status: 'active',
+          currentPeriodStart: fields.currentPeriodStart,
+          currentPeriodEnd: fields.currentPeriodEnd,
+          startedAt: fields.startedAt,
+        })
+
+        await resetCredits(admin, userId)
+
+        logger.info('[webhook] subscription.active — credits reset', { userId, planSlug })
+        break
+      }
+
+      // ── Subscription Uncanceled (user reactivates) ───────────────
+      case 'subscription.uncanceled': {
+        if (!userId) {
+          logger.warn('[webhook] subscription.uncanceled missing user_id')
+          break
+        }
+        const fields = extractSubscriptionFields(data)
+        const planSlug = getProductPlanSlug(fields.productId) || undefined
+
+        await (admin
+          .from('subscriptions' as any) as any)
+          .update({
+            status: 'active',
+            cancel_at_period_end: false,
+            ...(planSlug ? { plan_slug: planSlug } : {}),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+
+        logger.info('[webhook] Subscription uncanceled', { userId })
         break
       }
 
@@ -305,7 +381,14 @@ export async function POST(req: NextRequest) {
         const checkoutStatus = data.status as string
         if (checkoutStatus === 'confirmed' && userId) {
           const fields = extractSubscriptionFields(data)
-          const planSlug = resolvePlanSlug(fields.productId)
+          const planSlug = getProductPlanSlug(fields.productId)
+
+          if (!planSlug) {
+            logger.warn('[webhook] checkout.updated — unknown product ID', {
+              productId: fields.productId,
+            })
+            break
+          }
 
           await upsertSubscription(admin, {
             userId,

@@ -28,7 +28,8 @@ function getRedis(): Redis {
 
 let redisInstance: Redis | null = null
 
-function redis(): Redis {
+/** Raw Redis singleton — exported for use in analyze route in-flight lock */
+export function redis(): Redis {
   if (!redisInstance) {
     redisInstance = getRedis()
   }

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import * as Sentry from '@sentry/nextjs'
 import { logger } from '@/lib/logger'
 import { checkoutLimiter, applyRateLimit } from '@/lib/rateLimit'
+import { getProductPlanSlug, PLAN_RANK } from '@/lib/planUtils'
 
 // ── Fix #2: Whitelist of valid Polar product IDs ───────────────────
 const VALID_PRODUCT_IDS = new Set(
@@ -99,6 +100,51 @@ export async function POST(req: NextRequest) {
         { error: 'Invalid product ID' },
         { status: 400 }
       )
+    }
+
+    // ── Fix #4: Pre-checkout subscription check ────────────────────
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceRoleKey) {
+      logger.error('[checkout] SUPABASE_SERVICE_ROLE_KEY not set')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey
+    )
+
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan_slug, status, current_period_end')
+      .eq('user_id', user.id)
+      .in('status', ['active', 'trialing'])
+      .maybeSingle()
+
+    if (existingSub) {
+      const requestedPlan = getProductPlanSlug(productId)
+      const currentRank = PLAN_RANK[existingSub.plan_slug] ?? 0
+      const requestedRank = PLAN_RANK[requestedPlan ?? 'hobby'] ?? 0
+
+      if (requestedRank <= currentRank) {
+        logger.warn('[checkout] Downgrade/same-plan checkout blocked', {
+          userId: user.id,
+          currentPlan: existingSub.plan_slug,
+          requestedPlan,
+        })
+        return NextResponse.json(
+          {
+            error: 'You already have an equal or higher plan active.',
+            currentPlan: existingSub.plan_slug,
+            currentPeriodEnd: existingSub.current_period_end,
+          },
+          { status: 409 }
+        )
+      }
+      // Allow upgrade (higher plan) to proceed
     }
 
     const polarToken = process.env.POLAR_ORGANIZATION_TOKEN

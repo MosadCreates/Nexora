@@ -3,8 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import * as Sentry from '@sentry/nextjs'
 import { logger } from '@/lib/logger'
-import { analyzeLimiter, applyRateLimit } from '@/lib/rateLimit'
+import { analyzeLimiter, applyRateLimit, redis } from '@/lib/rateLimit'
 import { getCachedAnalysis, setCachedAnalysis } from '@/lib/analysisCache'
+import { MAX_CREDITS } from '@/lib/planUtils'
 
 // ── Fix #1 + #6: Module-level singleton — instantiated once, not per request ──
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -117,248 +118,312 @@ export async function POST(req: NextRequest) {
       queryLength: trimmedQuery.length
     })
 
-    // ── Fix #1: Credit check ───────────────────────────────────────
+    // ── Fix #1: Service role client for DB operations ──────────────
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // ── Fix #9: Check cache BEFORE calling Gemini ──────────────────
-    // Fix #7 (Audit 2): Cache namespaced by user.id
-    const cached = await getCachedAnalysis(trimmedQuery, user.id)
-    if (cached) {
-      logger.info('[analyze] Cache HIT', { userId: user.id })
+    // ── Fix #2: Pre-check credits BEFORE calling Gemini ────────────
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('credits_used')
+      .eq('id', user.id)
+      .single()
 
-      // Still save to user's history and decrement credits atomically
-      try {
-        await supabaseAdmin.rpc('save_analysis_atomically', {
-          p_user_id: user.id,
-          p_query_text: trimmedQuery,
-          p_analysis_result: cached
-        })
-      } catch (rpcError: unknown) {
-        const errMsg = rpcError instanceof Error ? rpcError.message : String(rpcError)
-        if (errMsg.includes('NO_CREDITS_REMAINING')) {
-          return NextResponse.json(
-            { error: 'No credits remaining' },
-            { status: 403 }
-          )
-        }
-        throw rpcError
-      }
-
-      return NextResponse.json(cached, {
-        headers: { 'X-Cache': 'HIT' }
-      })
-    }
-
-    // ── Verify API key exists (Fix #1: removed secret logging) ─────
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      logger.error('[analyze] Gemini API key not configured')
+    if (profileError || !profileData) {
       return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
+        { error: 'Unable to verify account status' },
+        { status: 403 }
       )
     }
 
-    // ── Model fallback with timeout (Fix #7A) ──────────────────────
-    let response: { text: () => string; candidates?: unknown[] } | undefined
-    let usedModel = 'unknown'
+    // Get user's active plan from subscriptions
+    const { data: subscriptionData } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan_slug, status')
+      .eq('user_id', user.id)
+      .in('status', ['active', 'trialing'])
+      .maybeSingle()
 
-    const modelsToTry = [
-      { name: 'gemini-2.5-flash', version: 'v1beta' as const },
-      { name: 'gemini-2.0-flash', version: 'v1beta' as const },
-      { name: 'gemini-1.5-flash', version: 'v1beta' as const },
-    ]
+    const activePlan = subscriptionData?.plan_slug ?? 'hobby'
+    const maxCredits = MAX_CREDITS[activePlan] ?? 3
 
-    let lastError: Error | null = null
+    if (profileData.credits_used >= maxCredits) {
+      return NextResponse.json(
+        { error: 'No credits remaining. Please upgrade your plan.' },
+        { status: 403 }
+      )
+    }
 
-    for (const { name: modelName, version: apiVersion } of modelsToTry) {
-      try {
-        logger.info('[analyze] Trying model with search', { model: modelName, apiVersion })
+    // ── Fix #6: In-flight request lock ─────────────────────────────
+    let lockAcquired = false
+    const lockKey = `analyze:lock:${user.id}`
+    try {
+      const r = redis()
+      const result = await r.set(lockKey, '1', { nx: true, ex: 60 })
+      lockAcquired = result === 'OK'
+    } catch (lockErr) {
+      // If Redis is down, allow the request through (lock is secondary protection)
+      logger.warn('[analyze] Lock acquisition failed — proceeding without lock', {
+        error: (lockErr as Error).message,
+      })
+      lockAcquired = true // treat as acquired to proceed
+    }
 
-        // ── Attempt 1: With Search Tool ───────────────────────────
-        const modelWithSearch = genAI.getGenerativeModel(
-          {
-            model: modelName,
-            systemInstruction: SYSTEM_INSTRUCTION,
-            tools: [{ googleSearchRetrieval: {} }] as never
-          },
-          { apiVersion }
-        )
+    if (!lockAcquired) {
+      return NextResponse.json(
+        { error: 'An analysis is already in progress. Please wait.' },
+        { status: 429 }
+      )
+    }
 
-        const prompt = `Analyze the following query for competitive weaknesses and opportunities: "${trimmedQuery}"\n\nRemember: Respond with ONLY valid JSON.`
+    try {
+      // ── Fix #9: Check cache BEFORE calling Gemini ──────────────────
+      // Fix #7 (Audit 2): Cache namespaced by user.id
+      const cached = await getCachedAnalysis(trimmedQuery, user.id)
+      if (cached) {
+        logger.info('[analyze] Cache HIT', { userId: user.id })
 
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 45_000) // Slightly longer for search
-
+        // Still save to user's history and decrement credits atomically
         try {
-          const result = await modelWithSearch.generateContent({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          await supabaseAdmin.rpc('save_analysis_atomically', {
+            p_user_id: user.id,
+            p_query_text: trimmedQuery,
+            p_analysis_result: cached
           })
-          response = result.response as typeof response
-          usedModel = modelName
-        } catch (searchErr: any) {
-          // ── Fallback: If ANY error occurs with search, try WITHOUT search ──
-          // This handles 429s (Quota) AND 404s (Search not enabled for this API key tier)
-          logger.warn('[analyze] Search failed, retrying without search', { 
-            model: modelName, 
-            error: searchErr.message?.substring(0, 100) 
-          })
-          
-          const modelNoSearch = genAI.getGenerativeModel(
+        } catch (rpcError: unknown) {
+          const errMsg = rpcError instanceof Error ? rpcError.message : String(rpcError)
+          if (errMsg.includes('NO_CREDITS_REMAINING')) {
+            return NextResponse.json(
+              { error: 'No credits remaining. Please upgrade your plan.' },
+              { status: 403 }
+            )
+          }
+          throw rpcError
+        }
+
+        return NextResponse.json(cached, {
+          headers: { 'X-Cache': 'HIT' }
+        })
+      }
+
+      // ── Verify API key exists (Fix #1: removed secret logging) ─────
+      const apiKey = process.env.GEMINI_API_KEY
+      if (!apiKey) {
+        logger.error('[analyze] Gemini API key not configured')
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        )
+      }
+
+      // ── Model fallback with timeout (Fix #7A) ──────────────────────
+      let response: { text: () => string; candidates?: unknown[] } | undefined
+      let usedModel = 'unknown'
+
+      const modelsToTry = [
+        { name: 'gemini-2.5-flash', version: 'v1beta' as const },
+        { name: 'gemini-2.0-flash', version: 'v1beta' as const },
+        { name: 'gemini-1.5-flash', version: 'v1beta' as const },
+      ]
+
+      let lastError: Error | null = null
+
+      for (const { name: modelName, version: apiVersion } of modelsToTry) {
+        try {
+          logger.info('[analyze] Trying model with search', { model: modelName, apiVersion })
+
+          // ── Attempt 1: With Search Tool ───────────────────────────
+          const modelWithSearch = genAI.getGenerativeModel(
             {
               model: modelName,
-              systemInstruction: SYSTEM_INSTRUCTION
+              systemInstruction: SYSTEM_INSTRUCTION,
+              tools: [{ googleSearchRetrieval: {} }] as never
             },
             { apiVersion }
           )
 
-          const fallbackResult = await modelNoSearch.generateContent({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          })
-          response = fallbackResult.response as typeof response
-          usedModel = `${modelName} (no-search)`
-        } finally {
-          clearTimeout(timeoutId)
+          const prompt = `Analyze the following query for competitive weaknesses and opportunities: "${trimmedQuery}"\n\nRemember: Respond with ONLY valid JSON.`
+
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 45_000) // Slightly longer for search
+
+          try {
+            const result = await modelWithSearch.generateContent({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            })
+            response = result.response as typeof response
+            usedModel = modelName
+          } catch (searchErr: any) {
+            // ── Fallback: If ANY error occurs with search, try WITHOUT search ──
+            // This handles 429s (Quota) AND 404s (Search not enabled for this API key tier)
+            logger.warn('[analyze] Search failed, retrying without search', { 
+              model: modelName, 
+              error: searchErr.message?.substring(0, 100) 
+            })
+            
+            const modelNoSearch = genAI.getGenerativeModel(
+              {
+                model: modelName,
+                systemInstruction: SYSTEM_INSTRUCTION
+              },
+              { apiVersion }
+            )
+
+            const fallbackResult = await modelNoSearch.generateContent({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            })
+            response = fallbackResult.response as typeof response
+            usedModel = `${modelName} (no-search)`
+          } finally {
+            clearTimeout(timeoutId)
+          }
+
+          if (response) {
+            logger.info('[analyze] Model succeeded', { model: usedModel })
+            break
+          }
+        } catch (err: unknown) {
+          lastError = err instanceof Error ? err : new Error(String(err))
+          const msg = lastError.message
+
+          // ── Fix: Only fall back on 404/500/etc, not 429 ─────────────
+          const isRecoverable =
+            msg.includes('404') ||
+            msg.includes('not found') ||
+            msg.includes('400') ||
+            msg.includes('Bad Request') ||
+            msg.includes('500')
+
+          if (isRecoverable) {
+            logger.warn('[analyze] Model failed, trying next', {
+              model: modelName,
+              reason: msg.substring(0, 100)
+            })
+            continue
+          }
+
+          // Abort errors → 504
+          if (lastError.name === 'AbortError') {
+            return NextResponse.json(
+              { error: 'Analysis timed out. Please try again.' },
+              { status: 504 }
+            )
+          }
+
+          break // Non-recoverable error
         }
-
-        if (response) {
-          logger.info('[analyze] Model succeeded', { model: usedModel })
-          break
-        }
-      } catch (err: unknown) {
-        lastError = err instanceof Error ? err : new Error(String(err))
-        const msg = lastError.message
-
-        // ── Fix: Only fall back on 404/500/etc, not 429 ─────────────
-        const isRecoverable =
-          msg.includes('404') ||
-          msg.includes('not found') ||
-          msg.includes('400') ||
-          msg.includes('Bad Request') ||
-          msg.includes('500')
-
-        if (isRecoverable) {
-          logger.warn('[analyze] Model failed, trying next', {
-            model: modelName,
-            reason: msg.substring(0, 100)
-          })
-          continue
-        }
-
-        // Abort errors → 504
-        if (lastError.name === 'AbortError') {
-          return NextResponse.json(
-            { error: 'Analysis timed out. Please try again.' },
-            { status: 504 }
-          )
-        }
-
-        break // Non-recoverable error
       }
-    }
 
-    if (!response) {
-      logger.error('[analyze] All models failed', {
-        lastError: lastError?.message
-      })
-      Sentry.captureException(lastError)
-      throw lastError || new Error('Failed to generate content with any model')
-    }
+      if (!response) {
+        logger.error('[analyze] All models failed', {
+          lastError: lastError?.message
+        })
+        Sentry.captureException(lastError)
+        throw lastError || new Error('Failed to generate content with any model')
+      }
 
-    // ── Parse Gemini response ───────────────────────────────────────
-    let rawText = response.text() || '{}'
-    rawText = rawText.trim()
-    if (rawText.startsWith('```json')) rawText = rawText.substring(7)
-    else if (rawText.startsWith('```')) rawText = rawText.substring(3)
-    if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3)
-    rawText = rawText.trim()
+      // ── Parse Gemini response ───────────────────────────────────────
+      let rawText = response.text() || '{}'
+      rawText = rawText.trim()
+      if (rawText.startsWith('```json')) rawText = rawText.substring(7)
+      else if (rawText.startsWith('```')) rawText = rawText.substring(3)
+      if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3)
+      rawText = rawText.trim()
 
-    const json = JSON.parse(rawText)
+      const json = JSON.parse(rawText)
 
-    // ── Extract grounding sources ───────────────────────────────────
-    const candidate = (response as { candidates?: Array<{ groundingMetadata?: Record<string, unknown> }> }).candidates?.[0]
-    let sources: { title: string; uri: string }[] = []
-    const gm = candidate?.groundingMetadata as Record<string, unknown[] | undefined> | undefined
+      // ── Extract grounding sources ───────────────────────────────────
+      const candidate = (response as { candidates?: Array<{ groundingMetadata?: Record<string, unknown> }> }).candidates?.[0]
+      let sources: { title: string; uri: string }[] = []
+      const gm = candidate?.groundingMetadata as Record<string, unknown[] | undefined> | undefined
 
-    if (gm?.groundingChunks && (gm.groundingChunks as Array<{ web?: { uri?: string; title?: string } }>).length > 0) {
-      sources = (gm.groundingChunks as Array<{ web?: { uri?: string; title?: string } }>)
-        .filter((chunk) => chunk?.web?.uri)
-        .map((chunk) => ({
-          title: chunk.web?.title || 'Source',
-          uri: chunk.web!.uri!
+      if (gm?.groundingChunks && (gm.groundingChunks as Array<{ web?: { uri?: string; title?: string } }>).length > 0) {
+        sources = (gm.groundingChunks as Array<{ web?: { uri?: string; title?: string } }>)
+          .filter((chunk) => chunk?.web?.uri)
+          .map((chunk) => ({
+            title: chunk.web?.title || 'Source',
+            uri: chunk.web!.uri!
+          }))
+      }
+
+      if (sources.length === 0 && json.sources && Array.isArray(json.sources)) {
+        sources = json.sources.map((s: { title?: string; name?: string; uri?: string; url?: string }) => ({
+          title: s.title || s.name || 'Source',
+          uri: s.uri || s.url || '#'
         }))
-    }
+      }
 
-    if (sources.length === 0 && json.sources && Array.isArray(json.sources)) {
-      sources = json.sources.map((s: { title?: string; name?: string; uri?: string; url?: string }) => ({
-        title: s.title || s.name || 'Source',
-        uri: s.uri || s.url || '#'
-      }))
-    }
+      // ── Build final report ──────────────────────────────────────────
+      const finalReport = {
+        executiveSummary: json.executiveSummary || '',
+        weaknessMatrix: (json.weaknessMatrix || []).map((w: Record<string, unknown>) => ({
+          ...w,
+          quotes: (w.quotes as string[]) || [],
+          competitorsAffected: (w.competitorsAffected as unknown[]) || []
+        })),
+        comparisonTable: json.comparisonTable || [],
+        strategicRecommendations: json.strategicRecommendations || {
+          strongestOpportunity: '',
+          quickWinAlternative: '',
+          redFlags: ''
+        },
+        validationNextSteps: json.validationNextSteps || [],
+        sources
+      }
 
-    // ── Build final report ──────────────────────────────────────────
-    const finalReport = {
-      executiveSummary: json.executiveSummary || '',
-      weaknessMatrix: (json.weaknessMatrix || []).map((w: Record<string, unknown>) => ({
-        ...w,
-        quotes: (w.quotes as string[]) || [],
-        competitorsAffected: (w.competitorsAffected as unknown[]) || []
-      })),
-      comparisonTable: json.comparisonTable || [],
-      strategicRecommendations: json.strategicRecommendations || {
-        strongestOpportunity: '',
-        quickWinAlternative: '',
-        redFlags: ''
-      },
-      validationNextSteps: json.validationNextSteps || [],
-      sources
-    }
+      // ── Fix #2: Atomic credit decrement + analysis save (MUST block on failure) ──
+      try {
+        const { error: rpcError } = await supabaseAdmin.rpc('save_analysis_atomically', {
+          p_user_id: user.id,
+          p_query_text: trimmedQuery,
+          p_analysis_result: finalReport
+        })
 
-    // ── Fix #8: Atomic credit decrement + analysis save (server side) ─
-    try {
-      const { error: rpcError } = await supabaseAdmin.rpc('save_analysis_atomically', {
-        p_user_id: user.id,
-        p_query_text: trimmedQuery,
-        p_analysis_result: finalReport
-      })
-
-      if (rpcError) {
-        if (rpcError.message?.includes('NO_CREDITS_REMAINING')) {
+        if (rpcError) {
+          if (rpcError.message?.includes('NO_CREDITS_REMAINING')) {
+            // Fix #2: DO NOT return the analysis — user has no credits
+            return NextResponse.json(
+              { error: 'No credits remaining. Please upgrade your plan.' },
+              { status: 403 }
+            )
+          }
+          logger.error('[analyze] RPC save failed', { error: rpcError.message })
+        }
+      } catch (rpcErr) {
+        const rpcMsg = rpcErr instanceof Error ? rpcErr.message : String(rpcErr)
+        if (rpcMsg.includes('NO_CREDITS_REMAINING')) {
+          // Fix #2: DO NOT return the analysis — user has no credits
           return NextResponse.json(
-            { error: 'No credits remaining' },
+            { error: 'No credits remaining. Please upgrade your plan.' },
             { status: 403 }
           )
         }
-        logger.error('[analyze] RPC save failed', { error: rpcError.message })
-        // Don't block the response — user still gets their report
+        logger.error('[analyze] RPC exception', { error: rpcMsg })
       }
-    } catch (rpcErr) {
-      const rpcMsg = rpcErr instanceof Error ? rpcErr.message : String(rpcErr)
-      if (rpcMsg.includes('NO_CREDITS_REMAINING')) {
-        return NextResponse.json(
-          { error: 'No credits remaining' },
-          { status: 403 }
-        )
+
+      // ── Fix #9: Cache the result ────────────────────────────────────
+      // Fix #7 (Audit 2): Cache namespaced by user.id
+      await setCachedAnalysis(trimmedQuery, user.id, finalReport)
+
+      logger.info('[analyze] Analysis complete', {
+        userId: user.id,
+        model: usedModel,
+        sourcesCount: sources.length
+      })
+
+      return NextResponse.json(finalReport, {
+        headers: { 'X-Cache': 'MISS' }
+      })
+    } finally {
+      // ── Fix #6: Always release the in-flight lock ─────────────────
+      try {
+        await redis().del(lockKey)
+      } catch {
+        // Silently fail — lock has a TTL, so it'll expire anyway
       }
-      logger.error('[analyze] RPC exception', { error: rpcMsg })
     }
-
-    // ── Fix #9: Cache the result ────────────────────────────────────
-    // Fix #7 (Audit 2): Cache namespaced by user.id
-    await setCachedAnalysis(trimmedQuery, user.id, finalReport)
-
-    logger.info('[analyze] Analysis complete', {
-      userId: user.id,
-      model: usedModel,
-      sourcesCount: sources.length
-    })
-
-    return NextResponse.json(finalReport, {
-      headers: { 'X-Cache': 'MISS' }
-    })
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error))
     logger.error('[analyze] Server error', { error: err.message, stack: err.stack })

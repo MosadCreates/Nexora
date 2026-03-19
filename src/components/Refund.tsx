@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react';
 import { BackgroundBeams } from './ui/aceternity/background-beams';
 import { Highlight } from './ui/aceternity/hero-highlight';
