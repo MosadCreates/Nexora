@@ -61,11 +61,18 @@ export const AnalysisPage: React.FC = () => {
         .limit(10)
 
       if (error) {
+        // Ignore Supabase query cancellation errors on rapid remounts
+        if (error.message?.includes('Lock broken') || error.name === 'AbortError' || error.message?.includes('AbortError')) {
+          return;
+        }
         console.error('❌ Error fetching recent analyses:', error)
       } else if (data) {
         setAnalyses(data)
       }
-    } catch (err) {
+    } catch (err: any) {
+        if (err?.name === 'AbortError' || err?.message?.includes('AbortError') || err?.message?.includes('Lock broken')) {
+          return;
+        }
       console.error('❌ Unexpected error in fetchRecentAnalyses:', err)
     } finally {
       setLoadingAnalyses(false)
