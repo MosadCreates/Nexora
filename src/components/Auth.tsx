@@ -137,15 +137,17 @@ const Auth: React.FC = () => {
         if (error) throw error
 
         if (data.session) {
-          router.replace('/')
+          // If auto-sign-in is enabled (no email confirmation needed)
+          router.push('/')
         } else {
+          // Email confirmation required
           setMessage({
             type: 'success',
             text: 'Check your email for the confirmation link!'
           })
-          setTimeout(() => {
-            router.replace('/')
-          }, 2000)
+          // Don't redirect immediately so they can read the message,
+          // but if they click login, they can switch tabs. The callback
+          // route will handle the actual redirect when they click the email link.
         }
       } else {
         // Fix #14 (Audit 2): Removed console.log that exposed email
@@ -185,7 +187,7 @@ const Auth: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: `${window.location.origin}/auth/callback`
         }
       })
       if (error) throw error
