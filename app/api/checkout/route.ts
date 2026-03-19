@@ -14,9 +14,24 @@ const VALID_PRODUCT_IDS = new Set(
   ].filter(Boolean)
 )
 
+// ── Fix #3 (Audit 2): Validate redirect URLs ──────────────────────
+function isValidRedirectUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_APP_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ].filter(Boolean)
+    return allowedOrigins.some(origin => parsed.origin === origin)
+  } catch {
+    return false
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // ── Fix #2: Authentication ─────────────────────────────────────
+    // ── Authentication ─────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -38,8 +53,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // ── Fix #3: Rate Limiting ──────────────────────────────────────
-    const rateLimitResponse = await applyRateLimit(checkoutLimiter, user.id)
+    // ── Rate Limiting ──────────────────────────────────────────────
+    const rateLimitResponse = await applyRateLimit(checkoutLimiter, user.id, req)
     if (rateLimitResponse) return rateLimitResponse
 
     // ── Parse & validate request body ──────────────────────────────
@@ -52,7 +67,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Fix #2: Whitelist check — reject unknown product IDs ───────
+    // ── Fix #3 (Audit 2): Validate redirect URLs ──────────────────
+    if (successUrl && !isValidRedirectUrl(successUrl)) {
+      logger.warn('[checkout] Invalid successUrl rejected', {
+        userId: user.id,
+        url: successUrl,
+      })
+      return NextResponse.json(
+        { error: 'Invalid redirect URL' },
+        { status: 400 }
+      )
+    }
+    if (cancelUrl && !isValidRedirectUrl(cancelUrl)) {
+      logger.warn('[checkout] Invalid cancelUrl rejected', {
+        userId: user.id,
+        url: cancelUrl,
+      })
+      return NextResponse.json(
+        { error: 'Invalid redirect URL' },
+        { status: 400 }
+      )
+    }
+
+    // ── Whitelist check — reject unknown product IDs ───────────────
     if (VALID_PRODUCT_IDS.size > 0 && !VALID_PRODUCT_IDS.has(productId)) {
       logger.warn('[checkout] Invalid product ID attempted', {
         userId: user.id,
@@ -78,7 +115,7 @@ export async function POST(req: NextRequest) {
       productId
     })
 
-    // ── Fix #7B: 15-second timeout for Polar API ───────────────────
+    // ── 15-second timeout for Polar API ────────────────────────────
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 15_000)
 
@@ -96,7 +133,6 @@ export async function POST(req: NextRequest) {
           cancel_url: cancelUrl,
           customer_email: user.email,
           metadata: {
-            // Fix #2: ALWAYS use server-derived user ID, never trust client
             user_id: user.id
           }
         }),
@@ -123,7 +159,7 @@ export async function POST(req: NextRequest) {
         detail: data.detail
       })
       return NextResponse.json(
-        { error: data.detail || 'Failed to create checkout session' },
+        { error: 'Failed to create checkout session' },
         { status: polarResponse.status }
       )
     }
@@ -132,10 +168,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: data.url })
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error))
-    logger.error('[checkout] Server error', { error: err.message })
+    logger.error('[checkout] Server error', { error: err.message, stack: err.stack })
     Sentry.captureException(err)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An internal error occurred. Please try again.' },
       { status: 500 }
     )
   }

@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { blogPosts } from '@/data/blogData'
 import { ArrowLeft } from 'lucide-react'
 import { motion } from 'framer-motion'
+import DOMPurify from 'dompurify'
 
 const BlogPost: React.FC = () => {
   const params = useParams()
@@ -15,6 +16,24 @@ const BlogPost: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [slug])
+
+  // Fix #8 (Audit 2): Sanitize blog post HTML content with DOMPurify
+  const sanitizedContent = useMemo(() => {
+    if (!post) return ''
+    if (typeof window !== 'undefined') {
+      return DOMPurify.sanitize(post.content, {
+        ALLOWED_TAGS: [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'p', 'br', 'hr',
+          'ul', 'ol', 'li',
+          'strong', 'em', 'b', 'i', 'u',
+          'a', 'blockquote', 'code', 'pre',
+        ],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+      })
+    }
+    return post.content
+  }, [post])
 
   if (!post) {
     return (
@@ -88,9 +107,10 @@ const BlogPost: React.FC = () => {
                 </h1>
               </header>
 
+              {/* Fix #8 (Audit 2): Content sanitized with DOMPurify */}
               <div
                 className='mt-8 prose prose-lg dark:prose-invert prose-neutral max-w-none'
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizedContent }}
               />
             </article>
           </div>

@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 /**
- * Health Check Endpoint — Fix #12
+ * Health Check Endpoint — Fix #12 (Audit 2)
  *
  * GET /api/health
- * No authentication required. Checks Supabase connectivity.
- * Returns 200 if healthy, 503 if degraded.
+ * Public: Returns minimal status info (status + timestamp only).
+ * With x-health-key header: Returns full diagnostics.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const start = Date.now()
   let dbStatus: 'ok' | 'error' = 'error'
 
@@ -39,15 +39,33 @@ export async function GET() {
 
   const overallStatus = dbStatus === 'ok' ? 'ok' : 'degraded'
 
+  // Fix #12 (Audit 2): Only return detailed info with the correct admin key
+  const adminKey = request.headers.get('x-health-key')
+  const isAdmin = adminKey && adminKey === process.env.HEALTH_CHECK_SECRET
+
+  if (isAdmin) {
+    // Full diagnostics for admin/monitoring
+    const body = {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version ?? '0.1.0',
+      responseTimeMs: Date.now() - start,
+      services: {
+        database: dbStatus,
+        uptime: process.uptime(),
+      },
+    }
+
+    return NextResponse.json(body, {
+      status: overallStatus === 'ok' ? 200 : 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
+  // Public: minimal info only
   const body = {
     status: overallStatus,
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version ?? '0.1.0',
-    responseTimeMs: Date.now() - start,
-    services: {
-      database: dbStatus,
-      uptime: process.uptime(),
-    },
   }
 
   return NextResponse.json(body, {

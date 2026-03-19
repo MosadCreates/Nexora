@@ -1,8 +1,12 @@
 /**
- * Rate Limiting — Fix #3
+ * Rate Limiting — Fix #3 + Fix #6 (Audit 2)
  *
  * Uses Upstash Redis + @upstash/ratelimit for Vercel-compatible rate limiting.
  * Three tiers: analyze (per-user), checkout (per-user), general (per-IP/user).
+ * + IP-based limiter as secondary protection layer.
+ *
+ * FIX #6 (Audit 2): Changed from fail-open to fail-closed. If Redis is
+ * unavailable, requests are DENIED (503) to prevent abuse.
  *
  * Environment variables required:
  *   UPSTASH_REDIS_REST_URL
@@ -11,6 +15,7 @@
 
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
+import { logger } from '@/lib/logger'
 
 function getRedis(): Redis {
   const url = process.env.UPSTASH_REDIS_REST_URL
@@ -19,6 +24,15 @@ function getRedis(): Redis {
     throw new Error('Upstash Redis credentials not configured')
   }
   return new Redis({ url, token })
+}
+
+let redisInstance: Redis | null = null
+
+function redis(): Redis {
+  if (!redisInstance) {
+    redisInstance = getRedis()
+  }
+  return redisInstance
 }
 
 /** 10 requests per 60 seconds per user (for AI analysis) */
@@ -51,39 +65,88 @@ export const generalLimiter = new Ratelimit({
   analytics: true,
 })
 
+/** IP-based limiter as secondary protection (Fix #6 Audit 2) */
+export const ipLimiter = new Ratelimit({
+  redis: (() => {
+    try { return getRedis() } catch { return Redis.fromEnv() }
+  })(),
+  limiter: Ratelimit.slidingWindow(50, '60 s'),
+  prefix: 'ratelimit:ip',
+  analytics: true,
+})
+
 /**
- * Apply a rate limiter to an identifier.
- * Returns a NextResponse with 429 status and Retry-After header if rate limited.
- * Returns null if the request is allowed.
+ * Internal: check a single limiter against an identifier.
+ * Returns a 429 Response if rate limited, null if allowed.
  */
-export async function applyRateLimit(
+async function checkLimit(
   limiter: Ratelimit,
   identifier: string
 ): Promise<Response | null> {
+  const { success, limit, remaining, reset } = await limiter.limit(identifier)
+  if (!success) {
+    const retryAfter = Math.ceil((reset - Date.now()) / 1000)
+    return new Response(
+      JSON.stringify({
+        error: 'Too many requests. Please try again later.',
+        retryAfter,
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(retryAfter),
+          'X-RateLimit-Limit': String(limit),
+          'X-RateLimit-Remaining': String(remaining),
+        },
+      }
+    )
+  }
+  return null
+}
+
+/**
+ * Apply a rate limiter to an identifier.
+ * Returns a Response with 429 status if rate limited, or 503 if Redis unavailable.
+ * Returns null if the request is allowed.
+ *
+ * Fix #6 (Audit 2): Fails CLOSED — if Redis is unavailable, returns 503.
+ * Also applies IP-based rate limiting if request is provided.
+ */
+export async function applyRateLimit(
+  limiter: Ratelimit,
+  identifier: string,
+  request?: Request
+): Promise<Response | null> {
   try {
-    const { success, limit, remaining, reset } = await limiter.limit(identifier)
-    if (!success) {
-      const retryAfter = Math.ceil((reset - Date.now()) / 1000)
-      return new Response(
-        JSON.stringify({
-          error: 'Too many requests. Please try again later.',
-          retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': String(retryAfter),
-            'X-RateLimit-Limit': String(limit),
-            'X-RateLimit-Remaining': String(remaining),
-          },
-        }
-      )
+    // Apply user/endpoint specific limit
+    const userResult = await checkLimit(limiter, identifier)
+    if (userResult) return userResult
+
+    // Also apply IP limit if request provided (Fix #6 Audit 2)
+    if (request) {
+      const ip =
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+        request.headers.get('x-real-ip') ??
+        'unknown'
+      const ipResult = await checkLimit(ipLimiter, ip)
+      if (ipResult) return ipResult
     }
+
     return null
   } catch (err) {
-    // If Redis is unavailable, allow the request (fail-open)
-    console.warn('[rateLimit] Redis unavailable, failing open:', (err as Error).message)
-    return null
+    // Fix #6 (Audit 2): FAIL CLOSED — if Redis is unavailable, deny the request
+    logger.error('[rateLimit] Redis unavailable — failing closed', {
+      error: (err as Error).message,
+    })
+    return new Response(
+      JSON.stringify({
+        error: 'Service temporarily unavailable. Please try again.',
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 }

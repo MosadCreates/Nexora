@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Fix #3: Rate Limiting ──────────────────────────────────────
-    const rateLimitResponse = await applyRateLimit(generalLimiter, user.id)
+    const rateLimitResponse = await applyRateLimit(generalLimiter, user.id, req)
     if (rateLimitResponse) return rateLimitResponse
 
     // ── Service role client for DB operations ──────────────────────
@@ -141,10 +141,10 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error))
-    logger.error('[cancel-subscription] Server error', { error: err.message })
+    logger.error('[cancel-subscription] Server error', { error: err.message, stack: err.stack })
     Sentry.captureException(err)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An internal error occurred. Please try again.' },
       { status: 500 }
     )
   }

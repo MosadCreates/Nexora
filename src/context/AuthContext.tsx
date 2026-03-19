@@ -23,7 +23,7 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (currentSession: any) => {
     if (!currentSession?.user) return
 
-    console.log('🔍 [AuthContext] Fetching profile for:', currentSession.user.id);
+    // Fix #14 (Audit 2): Removed console.log that exposed user ID
     const startTime = Date.now();
     
     // Create a promise with a timeout
@@ -39,15 +39,12 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
 
     try {
       const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as any;
-      
-      console.log(`⏱️ [AuthContext] Profile fetch took ${Date.now() - startTime}ms`);
 
       if (
         error &&
         (error.code === 'PGRST116' || error.message?.includes('0 rows'))
       ) {
         // Create profile if missing
-        console.log('📝 [AuthContext] Profile missing, creating one...');
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -60,20 +57,17 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
           .single()
 
         if (createError) {
-          console.error('❌ [AuthContext] Profile create error:', createError);
           setError(`Failed to create profile: ${createError.message}`)
         } else if (newProfile) {
-          console.log('✅ [AuthContext] Profile created successfully');
           setProfile(newProfile)
         }
       } else if (data) {
         setProfile(data)
       } else if (error) {
-        console.error('❌ [AuthContext] Profile fetch error:', error);
         setError(`Failed to fetch profile: ${error.message}`)
       }
     } catch (err: any) {
-      console.warn('⚠️ [AuthContext] Profile fetch failed or timed out:', err.message);
+      // Fix #14 (Audit 2): Removed console.warn that exposed user details
       // We don't block the app for profile fetch errors
     }
   }
@@ -108,20 +102,16 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔔 [AuthContext] Auth state change event:', event, !!session);
-      
       setSession(session);
       
       if (session) {
         localStorage.setItem('supabase-session-hint', 'true');
-        // Start profile fetching but don't strictly block UI loading state
         fetchProfile(session);
       } else {
         setProfile(null);
         localStorage.removeItem('supabase-session-hint');
       }
       
-      console.log('✅ [AuthContext] Setting loading to false (non-blocking)');
       setLoading(false);
     });
 

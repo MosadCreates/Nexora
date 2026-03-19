@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Fix #3: Rate Limiting ──────────────────────────────────────
-    const rateLimitResponse = await applyRateLimit(analyzeLimiter, user.id)
+    const rateLimitResponse = await applyRateLimit(analyzeLimiter, user.id, req)
     if (rateLimitResponse) return rateLimitResponse
 
     // ── Parse & validate request body ──────────────────────────────
@@ -93,6 +93,24 @@ export async function POST(req: NextRequest) {
     }
 
     const trimmedQuery = query.trim()
+
+    // ── Fix #5 (Audit 2): Maximum query length ────────────────────
+    const MAX_QUERY_LENGTH = 500
+    if (trimmedQuery.length > MAX_QUERY_LENGTH) {
+      return NextResponse.json(
+        { error: `Query must be ${MAX_QUERY_LENGTH} characters or less` },
+        { status: 400 }
+      )
+    }
+
+    // ── Fix #5 (Audit 2): Character validation ────────────────────
+    const ALLOWED_QUERY_PATTERN = /^[a-zA-Z0-9\s\-_.,!?'"()&@#%+\/:]+$/
+    if (!ALLOWED_QUERY_PATTERN.test(trimmedQuery)) {
+      return NextResponse.json(
+        { error: 'Query contains invalid characters' },
+        { status: 400 }
+      )
+    }
 
     logger.info('[analyze] Request received', {
       userId: user.id,
@@ -106,7 +124,8 @@ export async function POST(req: NextRequest) {
     )
 
     // ── Fix #9: Check cache BEFORE calling Gemini ──────────────────
-    const cached = await getCachedAnalysis(trimmedQuery)
+    // Fix #7 (Audit 2): Cache namespaced by user.id
+    const cached = await getCachedAnalysis(trimmedQuery, user.id)
     if (cached) {
       logger.info('[analyze] Cache HIT', { userId: user.id })
 
@@ -328,7 +347,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Fix #9: Cache the result ────────────────────────────────────
-    await setCachedAnalysis(trimmedQuery, finalReport)
+    // Fix #7 (Audit 2): Cache namespaced by user.id
+    await setCachedAnalysis(trimmedQuery, user.id, finalReport)
 
     logger.info('[analyze] Analysis complete', {
       userId: user.id,
@@ -341,7 +361,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error))
-    logger.error('[analyze] Server error', { error: err.message })
+    logger.error('[analyze] Server error', { error: err.message, stack: err.stack })
     Sentry.captureException(err)
 
     if (err.message?.includes('429') || err.message?.includes('quota')) {
@@ -351,8 +371,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Fix #9 (Audit 2): Never return raw error messages to the client
     return NextResponse.json(
-      { error: err.message || 'Internal server error' },
+      { error: 'An internal error occurred. Please try again.' },
       { status: 500 }
     )
   }

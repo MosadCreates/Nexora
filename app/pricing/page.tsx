@@ -17,6 +17,7 @@ export default function PricingPage () {
         currentPlan={effectivePlan}
         userEmail={session?.user?.email}
         userId={session?.user?.id}
+        accessToken={session?.access_token ?? null}
       />
       <Footer />
     </main>

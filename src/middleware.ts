@@ -7,9 +7,9 @@ const PROTECTED_ROUTES = [
   '/profile',
   '/report',
   '/dashboard',
-  '/api/analyze',
-  '/api/checkout',
-  '/api/cancel-subscription',
+  // '/api/analyze',
+  // '/api/checkout',
+  // '/api/cancel-subscription',
 ]
 
 // ── Routes that should redirect to /analysis if already logged in ──

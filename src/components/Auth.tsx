@@ -6,6 +6,7 @@ import { AnimatedTooltip } from '@/components/ui/aceternity/animated-tooltip'
 import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { Eye, EyeOff } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
+import { Turnstile } from '@marsidev/react-turnstile'
 
 const people = [
   {
@@ -66,6 +67,10 @@ const Auth: React.FC = () => {
     text: string
   } | null>(null)
 
+  // Fix #10 (Audit 2): Turnstile CAPTCHA state
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+
   // Determine if signup mode based on URL path
   const isSignUp = pathname === '/signup'
 
@@ -76,7 +81,34 @@ const Auth: React.FC = () => {
     setFirstName('')
     setLastName('')
     setMessage(null)
+    setTurnstileToken(null)
   }, [pathname])
+
+  // Fix #10 (Audit 2): Verify Turnstile token server-side
+  const verifyTurnstile = async (): Promise<boolean> => {
+    if (!turnstileSiteKey) return true // Allow if Turnstile not configured
+    if (!turnstileToken) {
+      setMessage({ type: 'error', text: 'Please complete the CAPTCHA verification' })
+      return false
+    }
+
+    try {
+      const response = await fetch('/api/auth/verify-captcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: turnstileToken }),
+      })
+      const result = await response.json()
+      if (!result.success) {
+        setMessage({ type: 'error', text: result.error || 'CAPTCHA verification failed' })
+        return false
+      }
+      return true
+    } catch {
+      setMessage({ type: 'error', text: 'CAPTCHA verification failed. Please try again.' })
+      return false
+    }
+  }
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,6 +116,13 @@ const Auth: React.FC = () => {
     setMessage(null)
 
     try {
+      // Fix #10 (Audit 2): Verify Turnstile before auth
+      const captchaValid = await verifyTurnstile()
+      if (!captchaValid) {
+        setLoading(false)
+        return
+      }
+
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -97,25 +136,19 @@ const Auth: React.FC = () => {
         })
         if (error) throw error
 
-        // Check if user is immediately logged in (email confirmation disabled)
         if (data.session) {
-          // User is logged in, redirect to home
           router.replace('/')
         } else {
-          // Email confirmation required
           setMessage({
             type: 'success',
             text: 'Check your email for the confirmation link!'
           })
-          // Redirect after a short delay to show the message
           setTimeout(() => {
             router.replace('/')
           }, 2000)
         }
       } else {
-        console.log('🔑 [Auth] Attempting login for:', email)
-        const startTime = Date.now();
-        
+        // Fix #14 (Audit 2): Removed console.log that exposed email
         const loginPromise = supabase.auth.signInWithPassword({
           email,
           password
@@ -127,19 +160,14 @@ const Auth: React.FC = () => {
 
         try {
           const { data, error } = (await Promise.race([loginPromise, timeoutPromise])) as any;
-          console.log(`⏱️ [Auth] signInWithPassword took ${Date.now() - startTime}ms`);
           
           if (error) {
-            console.error('❌ [Auth] Login error:', error);
             throw error;
           }
           
-          console.log('✅ [Auth] Login successful, session:', !!data.session)
-          // Redirect to home after successful login
-          console.log('🚀 [Auth] Redirecting to /');
+          // Fix #14 (Audit 2): Removed console.log of session details
           router.replace('/')
         } catch (err: any) {
-          console.error('❌ [Auth] Login process failed:', err);
           throw err;
         }
       }
@@ -312,9 +340,21 @@ const Auth: React.FC = () => {
               </div>
             )}
 
+            {/* Fix #10 (Audit 2): Cloudflare Turnstile CAPTCHA */}
+            {turnstileSiteKey && (
+              <div className='flex justify-center'>
+                <Turnstile
+                  siteKey={turnstileSiteKey}
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => setTurnstileToken(null)}
+                />
+              </div>
+            )}
+
             <button
               type='submit'
-              disabled={loading}
+              disabled={loading || (!!turnstileSiteKey && !turnstileToken)}
               className='w-full py-3 bg-black dark:bg-white text-white dark:text-black font-normal rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-all text-sm'
             >
               {loading ? 'Processing...' : isSignUp ? 'Sign up' : 'Sign in'}
