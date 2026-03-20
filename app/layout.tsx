@@ -17,9 +17,9 @@ export const metadata: Metadata = {
     template: "%s | Nexora",
   },
   description: "Nexora uses advanced artificial intelligence to analyze market shifts, competitor movements, and emerging trends.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://nexora.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraintel.com'),
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_APP_URL || 'https://nexora.app',
+    canonical: process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraintel.com',
   },
   verification: {
     google: 'pCeGa4cdenAr1X3NoeHCMP_xrC_73lkISmpcoWhDWA4', // just the content value, not the full tag
