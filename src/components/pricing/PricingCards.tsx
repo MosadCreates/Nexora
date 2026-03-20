@@ -10,7 +10,7 @@ import { SubscriptionPlan } from '@/types'
 import * as Sentry from '@sentry/nextjs'
 
 interface PricingCardsProps {
-  currentPlan: SubscriptionPlan
+  currentPlan?: SubscriptionPlan
   onUpgrade?: (plan: SubscriptionPlan) => void
   userEmail?: string
   userId?: string

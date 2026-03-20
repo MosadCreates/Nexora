@@ -35,15 +35,15 @@ export function Footer () {
           <div className='grid grid-cols-2 md:grid-cols-3 gap-10 items-start mt-10 md:mt-0 w-full md:w-auto'>
             <div className='flex flex-col space-y-4'>
               <p className="font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2">Product</p>
-              <Link href='/pricing' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Pricing</Link>
-              <Link href='/blog' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Blog</Link>
-              <Link href='/contact' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Contact</Link>
+              <Link href='/pricing' prefetch={true} className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Pricing</Link>
+              <Link href='/blog' prefetch={true} className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Blog</Link>
+              <Link href='/contact' prefetch={true} className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Contact</Link>
             </div>
             <div className='flex flex-col space-y-4'>
               <p className="font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2">Legal</p>
-              <Link href='/privacy' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Privacy</Link>
-              <Link href='/terms' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Terms</Link>
-              <Link href='/refund' className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Refund Policy</Link>
+              <Link href='/privacy' prefetch={true} className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Privacy</Link>
+              <Link href='/terms' prefetch={true} className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Terms</Link>
+              <Link href='/refund' prefetch={true} className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'>Refund Policy</Link>
             </div>
             <div className='flex flex-col space-y-4'>
               <p className="font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2">Social</p>

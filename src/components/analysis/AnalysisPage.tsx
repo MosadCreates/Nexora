@@ -33,10 +33,21 @@ export const AnalysisPage: React.FC = () => {
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [streamedText, setStreamedText] = useState('')
 
   // Fix #5: Post-checkout success UX
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
+
+  // Fix #7: Rate Limit Countdown
+  const [retryCountdown, setRetryCountdown] = useState(0)
+
+  useEffect(() => {
+    if (retryCountdown > 0) {
+      const timer = setTimeout(() => setRetryCountdown(prev => prev - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [retryCountdown])
 
   interface RecentAnalysis {
     id: string
@@ -162,54 +173,105 @@ export const AnalysisPage: React.FC = () => {
 
     setQuery(queryText)
     setStep(AnalysisStep.RESEARCHING)
+    setStreamedText('')
     setError(null)
     setReport(null)
 
-    const clusteringTimeout = setTimeout(
-      () => setStep(AnalysisStep.CLUSTERING),
-      4000
-    )
-    const scoringTimeout = setTimeout(() => setStep(AnalysisStep.SCORING), 8000)
-
     try {
-      // Fix #1/#8: Pass auth token; credits + save are handled server-side atomically
       const accessToken = session?.access_token
       if (!accessToken) {
         throw new Error('Authentication required')
       }
 
-      const result = await analyzeWeakness(queryText, accessToken)
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ query: queryText }),
+      })
+      
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Analysis failed')
+      }
 
-      // Refresh profile to pick up updated credits_used
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      
+      if (!reader) throw new Error('No response stream')
+      
+      let buffer = ''
+      let finalReportData: any = null
+      
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+        
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          
+          try {
+            const data = JSON.parse(line.slice(6))
+            
+            if (data.chunk) {
+              setStreamedText(prev => prev + data.chunk)
+            }
+            
+            if (data.error) {
+              throw new Error(data.error)
+            }
+            
+            if (data.done && data.report) {
+              finalReportData = data.report
+              setReport(data.report)
+            }
+          } catch (parseErr) {
+            // skip malformed
+          }
+        }
+      }
+
       if (session) {
         fetchProfile(session)
       }
 
-      // Fetch latest analysis to get the ID for redirect
-      let analysisId: string | null = null
-      if (session?.user?.id) {
-        const { data } = await supabase
-          .from('analysis_history')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
+      if (finalReportData) {
+        // Fetch latest analysis to get the ID for redirect
+        let analysisId: string | null = null
+        if (session?.user?.id) {
+          const { data } = await supabase
+            .from('analysis_history')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
 
-        if (data) {
-          analysisId = data.id
+          if (data) {
+            analysisId = data.id
+          }
         }
+        
+        setStep(AnalysisStep.COMPLETED)
+        router.push(analysisId ? `/report/${analysisId}` : '/report')
+      } else {
+        throw new Error('Analysis completed but no report was returned.')
       }
-
-      setReport(result)
-      setStep(AnalysisStep.COMPLETED)
-      router.push(analysisId ? `/report/${analysisId}` : '/report')
+      
     } catch (err: unknown) {
-      clearTimeout(clusteringTimeout)
-      clearTimeout(scoringTimeout)
       const error = err instanceof Error ? err : new Error(String(err))
       Sentry.captureException(error)
-      setError(getErrorMessage(error))
+      const errorMsg = getErrorMessage(error)
+      setError(errorMsg)
+      if (errorMsg.includes('limit reached')) {
+        setRetryCountdown(60)
+      }
       setStep(AnalysisStep.ERROR)
     }
   }
@@ -340,7 +402,22 @@ export const AnalysisPage: React.FC = () => {
         </>
       ) : (
         <div className='max-w-7xl mx-auto px-4 py-8 pt-24'>
-          {(step === AnalysisStep.RESEARCHING ||
+          {step === AnalysisStep.RESEARCHING && streamedText && (
+            <div className='max-w-4xl mx-auto mb-8'>
+              <div className='bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6'>
+                <div className='flex items-center gap-2 mb-4'>
+                  <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
+                  <span className='text-sm text-neutral-500'>Analyzing {query}...</span>
+                </div>
+                <p className='text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-mono whitespace-pre-wrap'>
+                  {streamedText}
+                  <span className='inline-block w-2 h-4 bg-neutral-400 animate-pulse ml-1' />
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {(step === AnalysisStep.RESEARCHING && !streamedText ||
             step === AnalysisStep.CLUSTERING ||
             step === AnalysisStep.SCORING) && (
             <div className='max-w-4xl mx-auto'>
@@ -371,12 +448,18 @@ export const AnalysisPage: React.FC = () => {
                     Analysis Interrupted
                   </h3>
                   <p className='text-red-700 mb-6'>{error}</p>
-                  <ShadButton
-                    onClick={() => handleAnalyze(query)}
-                    variant='destructive'
-                  >
-                    Retry Analysis
-                  </ShadButton>
+                  {retryCountdown > 0 ? (
+                    <ShadButton disabled variant='destructive'>
+                      Retry possible in {retryCountdown}s
+                    </ShadButton>
+                  ) : (
+                    <ShadButton
+                      onClick={() => handleAnalyze(query)}
+                      variant='destructive'
+                    >
+                      Retry Analysis
+                    </ShadButton>
+                  )}
                 </CardContent>
               </Card>
             </div>

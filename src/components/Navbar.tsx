@@ -221,6 +221,7 @@ function Navbar ({
                     : 'text-muted dark:text-muted-dark'
                 )}
                 href='/pricing'
+                prefetch={true}
               >
                 Pricing
               </Link>
@@ -232,6 +233,7 @@ function Navbar ({
                     : 'text-muted dark:text-muted-dark'
                 )}
                 href='/blog'
+                prefetch={true}
               >
                 Blog
               </Link>
@@ -244,6 +246,7 @@ function Navbar ({
                     : 'text-muted dark:text-muted-dark'
                 )}
                 href='/contact'
+                prefetch={true}
               >
                 Contact
               </Link>
@@ -298,6 +301,7 @@ function Navbar ({
                       'bg-gray-100 dark:bg-neutral-800 font-bold'
                   )}
                   href='/login'
+                  prefetch={true}
                 >
                   Login
                 </Link>
@@ -308,6 +312,7 @@ function Navbar ({
                       'ring-2 ring-neutral-400 dark:ring-neutral-600'
                   )}
                   href='/signup'
+                  prefetch={true}
                 >
                   Sign Up
                 </Link>

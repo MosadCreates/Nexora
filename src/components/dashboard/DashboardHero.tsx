@@ -9,8 +9,10 @@ import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { TypewriterEffectSmooth } from '@/components/ui/typewriter-effect'
 import { TextGenerateEffect } from '@/components/ui/aceternity/text-generate-effect'
 import { MetricTooltip } from '@/components/dashboard/MetricTooltip'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 export const DashboardHero: React.FC = () => {
+  const prefersReducedMotion = useReducedMotion()
   const words = `Harness autonomous intelligence to decode complex market dynamics and architect your next competitive advantage with data-driven precision.`
 
   return (
@@ -20,9 +22,9 @@ export const DashboardHero: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center">
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.5, delay: prefersReducedMotion ? 0 : 0.1 }}
             className="text-4xl md:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-8 tracking-tight pt-8"
           >
             Strategic Market <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300">Synthesis</span>
@@ -37,9 +39,9 @@ export const DashboardHero: React.FC = () => {
 
           {/* Stats / Trust badges */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.6 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 1, delay: prefersReducedMotion ? 0 : 0.6 }}
             className="mt-32 grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-neutral-200 dark:border-neutral-800 pt-12"
           >
             <div>

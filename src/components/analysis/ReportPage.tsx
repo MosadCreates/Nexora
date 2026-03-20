@@ -32,9 +32,6 @@ import Link from 'next/link'
 import { BackgroundBeams } from '../ui/aceternity/background-beams'
 import { EncryptedText } from '../ui/aceternity/encrypted-text'
 import { motion } from 'framer-motion'
-import { pdf } from '@react-pdf/renderer'
-import AnalysisPDF from './AnalysisPDF'
-
 type ReportTab = 'report' | 'resources'
 
 const DOWNLOAD_FORMATS = [
@@ -85,6 +82,7 @@ export const ReportPage: React.FC = () => {
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [query, setQuery] = useState<string>('')
   const [activeTab, setActiveTab] = useState<ReportTab>('report')
+  const [downloading, setDownloading] = useState<string | null>(null)
   const currentPlan = effectivePlan
   const planConfig = getPlanConfig(effectivePlan)
   const maxCredits = planConfig.credits
@@ -150,48 +148,57 @@ export const ReportPage: React.FC = () => {
   }
 
   const handleDownload = useCallback(
-    (formatId: string) => {
+    async (formatId: string) => {
       if (!report) return
 
-      if (formatId === 'json') {
-        const blob = new Blob([JSON.stringify(report, null, 2)], {
-          type: 'application/json'
-        })
-        triggerDownload(blob, `report-${id}.json`)
-      }
+      try {
+        setDownloading(formatId)
+        
+        if (formatId === 'json') {
+          const blob = new Blob([JSON.stringify(report, null, 2)], {
+            type: 'application/json'
+          })
+          triggerDownload(blob, `report-${id}.json`)
+        }
 
-      if (formatId === 'csv') {
-        const headers = [
-          'Weakness',
-          'Frequency',
-          'Pain Intensity',
-          'Opportunity Score',
-          'Significance'
-        ]
-        const rows =
-          report.weaknessMatrix?.map(w => [
-            `"${w.name}"`,
-            w.frequency,
-            w.painIntensity,
-            w.opportunityScore,
-            `"${w.significance}"`
-          ]) || []
-        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join(
-          '\n'
-        )
-        const blob = new Blob([csv], { type: 'text/csv' })
-        triggerDownload(blob, `report-${id}.csv`)
-      }
+        if (formatId === 'csv') {
+          const headers = [
+            'Weakness',
+            'Frequency',
+            'Pain Intensity',
+            'Opportunity Score',
+            'Significance'
+          ]
+          const rows =
+            report.weaknessMatrix?.map(w => [
+              `"${w.name}"`,
+              w.frequency,
+              w.painIntensity,
+              w.opportunityScore,
+              `"${w.significance}"`
+            ]) || []
+          const csv = [headers.join(','), ...rows.map(r => r.join(','))].join(
+            '\n'
+          )
+          const blob = new Blob([csv], { type: 'text/csv' })
+          triggerDownload(blob, `report-${id}.csv`)
+        }
 
-      if (formatId === 'pdf') {
-        const generatePdf = async () => {
+        if (formatId === 'pdf') {
+          const { pdf } = await import('@react-pdf/renderer')
+          const { default: AnalysisPDF } = await import('./AnalysisPDF')
+          
           const blob = await pdf(<AnalysisPDF report={report} query={query} />).toBlob()
           triggerDownload(blob, `report-${id}.pdf`)
         }
-        generatePdf()
+      } catch (err) {
+        import('@sentry/nextjs').then(Sentry => Sentry.captureException(err))
+        console.error('Download failed', err)
+      } finally {
+        setDownloading(null)
       }
     },
-    [report, id]
+    [report, id, query]
   )
 
   if (authLoading || subLoading) return null
@@ -325,6 +332,7 @@ export const ReportPage: React.FC = () => {
                   return (
                     <button
                       key={format.id}
+                      disabled={downloading === format.id}
                       onClick={() =>
                         hasAccess
                           ? handleDownload(format.id)
@@ -332,13 +340,17 @@ export const ReportPage: React.FC = () => {
                       }
                       className={cn(
                         'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-300',
-                        hasAccess
+                        hasAccess && downloading !== format.id
                           ? 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white'
                           : 'text-neutral-400 dark:text-neutral-600 cursor-not-allowed grayscale'
                       )}
                     >
                       {hasAccess ? (
-                        <Icon className={cn('w-4 h-4', format.color)} />
+                        downloading === format.id ? (
+                          <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                        ) : (
+                          <Icon className={cn('w-4 h-4', format.color)} />
+                        )
                       ) : (
                         <Lock className='w-3.5 h-3.5' />
                       )}

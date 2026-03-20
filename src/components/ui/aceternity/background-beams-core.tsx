@@ -2,21 +2,23 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 export const BackgroundBeams = ({ className }: { className?: string }) => {
   const rows = 12
   const cols = 15
   const [mounted, setMounted] = React.useState(false)
+  const prefersReducedMotion = useReducedMotion()
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted)
+  if (!mounted || prefersReducedMotion)
     return (
       <div
         className={cn(
-          'absolute inset-0 h-full w-full bg-white dark:bg-black',
+          'absolute inset-0 h-full w-full bg-white dark:bg-black pointer-events-none z-0',
           className
         )}
       />

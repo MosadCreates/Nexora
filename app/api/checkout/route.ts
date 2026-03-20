@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/nextjs'
 import { logger } from '@/lib/logger'
 import { checkoutLimiter, applyRateLimit } from '@/lib/rateLimit'
 import { getProductPlanSlug, PLAN_RANK } from '@/lib/planUtils'
+import { PerformanceTimer } from '@/lib/monitoring'
 
 // ── Fix #2: Whitelist of valid Polar product IDs ───────────────────
 const VALID_PRODUCT_IDS = new Set(
@@ -31,6 +32,7 @@ function isValidRedirectUrl(url: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const timer = new PerformanceTimer('api/checkout')
   try {
     // ── Authentication ─────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization')
@@ -211,6 +213,7 @@ export async function POST(req: NextRequest) {
     }
 
     logger.info('[checkout] Session created', { userId: user.id })
+    timer.stop({ productId })
     return NextResponse.json({ url: data.url })
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error))
