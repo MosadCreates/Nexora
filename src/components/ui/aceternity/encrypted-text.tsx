@@ -6,7 +6,7 @@ const TARGET_TEXT = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CYCLES_PER_LETTER = 2;
 const SHUFFLE_TIME = 50;
 
-const getRandomChar = () => TARGET_TEXT[Math.floor(Math.random() * TARGET_TEXT.length)];
+const getRandomChar = () => TARGET_TEXT[Math.floor(Math.random() * TARGET_TEXT.length)]!;
 
 export const EncryptedText = ({
   text,
@@ -26,7 +26,7 @@ export const EncryptedText = ({
         setDisplayText((prev) =>
           prev.map((char, index) => {
             if (iteration / CYCLES_PER_LETTER > index) {
-              return text[index];
+              return text[index]!;
             }
             return getRandomChar();
           })

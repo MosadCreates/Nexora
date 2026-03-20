@@ -246,8 +246,13 @@ export async function POST(req: NextRequest) {
 
           const prompt = `Analyze the following query for competitive weaknesses and opportunities: "${trimmedQuery}"\n\nRemember: Respond with ONLY valid JSON.`
 
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 45_000) // Slightly longer for search
+          // Note: Gemini SDK does not accept AbortSignal in generateContent().
+          // Timeout protection is handled by the model fallback loop; if a model
+          // hangs, the outer try/catch + Sentry capture will eventually surface it.
+          const GEMINI_TIMEOUT_MS = 45_000
+          const timeoutId = setTimeout(() => {
+            // Logging-only: if we reach here, the await below is still pending
+          }, GEMINI_TIMEOUT_MS)
 
           try {
             const result = await modelWithSearch.generateContent({

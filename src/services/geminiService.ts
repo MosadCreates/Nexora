@@ -26,7 +26,6 @@ export async function analyzeWeakness(query: string, accessToken: string): Promi
     return report;
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
-    console.error('❌ Analysis Service Error:', err.message);
     throw new Error(err.message || 'Analysis failed. Please try again.');
   }
 }

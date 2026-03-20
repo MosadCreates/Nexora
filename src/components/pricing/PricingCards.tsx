@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { BackgroundBeams } from '../ui/aceternity/background-beams'
+import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { GridBackground } from '../ui/aceternity/background-grid'
 import { TrustedBy } from '../Home/TrustedBy'
 import { useRouter } from 'next/navigation'
 import { SubscriptionPlan } from '@/types'
+import * as Sentry from '@sentry/nextjs'
 
 interface PricingCardsProps {
   currentPlan: SubscriptionPlan
@@ -88,7 +89,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
       }
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error))
-      console.error('Checkout error:', err.message)
+      Sentry.captureException(err)
       alert(`Failed to start checkout: ${err.message}`)
       setLoading(null)
     }
@@ -184,8 +185,6 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             </h1>
             <h2 className='text-sm md:text-base max-w-4xl my-4 mx-auto text-muted font-normal dark:text-muted-dark text-center'>
               <span
-                data-br='┬½r2g0┬╗'
-                data-brr='1'
                 style={{
                   display: 'inline-block',
                   verticalAlign: 'top',

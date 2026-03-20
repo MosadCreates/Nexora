@@ -9,21 +9,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'assets.aceternity.com' },
     ],
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-        ],
-      },
-    ]
-  },
+  // Fix #10: Security headers are set in middleware.ts (single source of truth).
+  // Removed duplicate headers() config that was here previously.
   // Fix #4: TypeScript errors must now be fixed before deploy.
   // ignoreBuildErrors has been REMOVED intentionally.
 };

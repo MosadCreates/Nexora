@@ -2,6 +2,7 @@
 
 import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 import { useEffect, useState } from "react";
 
@@ -82,7 +83,7 @@ export const AnimatedTestimonials = ({
                   }}
                   className="absolute inset-0 origin-bottom"
                 >
-                  <img
+                  <Image
                     src={testimonial.src}
                     alt={testimonial.name}
                     width={500}
@@ -116,13 +117,13 @@ export const AnimatedTestimonials = ({
             }}
           >
             <h3 className="text-2xl font-bold text-black dark:text-white">
-              {testimonials[active].name}
+              {testimonials[active]?.name || 'Anonymous'}
             </h3>
             <p className="text-sm text-gray-500 dark:text-neutral-500">
-              {testimonials[active].designation}
+              {testimonials[active]?.designation || 'Customer'}
             </p>
             <motion.p className="mt-8 text-lg text-gray-500 dark:text-neutral-300">
-              {testimonials[active].quote.split(" ").map((word, index) => (
+              {(testimonials[active]?.quote || '').split(" ").map((word, index) => (
                 <motion.span
                   key={index}
                   initial={{

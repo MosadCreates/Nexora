@@ -6,7 +6,6 @@ export interface UserProfile {
   last_name: string;
   email: string;
   credits_used: number;
-  is_pro: boolean;
   created_at: string;
 }
 

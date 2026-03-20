@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { BackgroundBeams } from './ui/aceternity/background-beams'
 import { Linkedin, CheckCircle2 } from 'lucide-react'
 import { AnimatedTooltip } from '@/components/ui/aceternity/animated-tooltip'
+import * as Sentry from '@sentry/nextjs'
 
 const people = [
   {
@@ -79,7 +80,7 @@ export const Contact = () => {
         setFormData({ name: '', email: '', company: '', message: '' })
       }
     } catch (error) {
-      console.error('Submission error:', error)
+      Sentry.captureException(error)
     } finally {
       setIsSubmitting(false)
     }

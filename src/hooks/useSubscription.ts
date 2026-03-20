@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase' // Adjust path if needed
+import { useEffect, useState, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
 import { resolveEffectivePlan, EffectivePlan } from '@/lib/accessControl'
+import * as Sentry from '@sentry/nextjs'
 
 export interface Subscription {
   id: string
@@ -9,9 +10,12 @@ export interface Subscription {
   polar_customer_id?: string
   plan_slug: string
   status: string
+  current_period_start: string
   current_period_end: string
   cancel_at_period_end: boolean
 }
+
+const AUTH_TIMEOUT_MS = 15_000
 
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -20,35 +24,42 @@ export function useSubscription() {
 
   useEffect(() => {
     let mounted = true
-    let channel: any = null
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function fetchSubscription() {
       try {
-        // Use a timeout for getUser() - increased to 15s for better resilience
+        // Use a timeout for getUser()
         const getUserPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth user fetch timeout (15s)')), 15000)
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Auth user fetch timeout (15s)')), AUTH_TIMEOUT_MS)
         );
 
         const result = await Promise.race([getUserPromise, timeoutPromise]);
-        const { data: { user } } = result as any;
+        const { data: { user } } = result;
         
         if (!user) {
-          setLoading(false)
+          if (mounted) setLoading(false)
           return
         }
 
         const { data, error } = await supabase
           .from('subscriptions')
-          .select('*')
+          .select('id, user_id, polar_subscription_id, polar_customer_id, plan_slug, status, current_period_start, current_period_end, cancel_at_period_end')
           .eq('user_id', user.id)
           .maybeSingle()
 
-        if (data) {
-          setSubscription(data)
+        // Fix #5: Actually handle the error
+        if (error) {
+          Sentry.captureException(error)
+          if (mounted) setLoading(false)
+          return
+        }
+
+        if (mounted && data) {
+          setSubscription(data as Subscription)
           setEffectivePlan(resolveEffectivePlan(data))
         }
-        setLoading(false)
+        if (mounted) setLoading(false)
 
         // Set up Realtime listener
         channel = supabase
@@ -70,8 +81,8 @@ export function useSubscription() {
           )
           .subscribe()
       } catch (err) {
-        console.error('Subscription fetch error:', err)
-        setLoading(false)
+        Sentry.captureException(err)
+        if (mounted) setLoading(false)
       }
     }
 

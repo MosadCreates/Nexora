@@ -186,7 +186,7 @@ export function FeaturesSection () {
           className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
         >
           {features.map((feature) => {
-            const accent = accentMap[feature.accentColor]
+            const accent = accentMap[feature.accentColor] || accentMap.blue!
             const Icon = feature.icon
             return (
               <motion.div key={feature.title} variants={cardVariants}>

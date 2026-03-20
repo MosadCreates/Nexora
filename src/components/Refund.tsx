@@ -4,13 +4,24 @@ import React from 'react';
 import { BackgroundBeams } from './ui/aceternity/background-beams';
 import { Highlight } from './ui/aceternity/hero-highlight';
 import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export const Refund: React.FC = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-black pt-20 relative overflow-hidden">
       <BackgroundBeams className="absolute inset-0 z-0" />
       
-      <div className="relative z-10 max-w-4xl mx-auto px-6 py-20">
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-20 lg:pt-32">
+        <div className='flex justify-start items-center mb-8'>
+          <Link href='/' className='flex space-x-2 items-center group'>
+            <ArrowLeft className='w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:-translate-x-1 transition-transform' />
+            <span className='text-sm text-neutral-500 dark:text-neutral-400'>
+              Back
+            </span>
+          </Link>
+        </div>
+
         <header className="mb-16 text-center">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-black dark:text-white mb-4">
             <Highlight className="text-black dark:text-white from-blue-500/20 to-indigo-500/20 dark:from-blue-500/30 dark:to-indigo-500/30">

@@ -24,12 +24,13 @@ import { GridBackground } from '../ui/aceternity/background-grid'
 import { PlanFeatureList } from '../ui/PlanFeatureList'
 import { getPlanConfig } from '../../lib/planFeatures'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
+import { DeleteAccountModal } from './DeleteAccountModal'
 
 import { useSubscription } from '../../hooks/useSubscription'
 import { resolveEffectivePlan } from '../../lib/accessControl'
 
 const Profile: React.FC = () => {
-  const { session, profile } = useAuth()
+  const { session, profile, fetchProfile } = useAuth()
   const { subscription, effectivePlan, loading: subLoading } = useSubscription()
   const router = useRouter()
 
@@ -73,6 +74,7 @@ const Profile: React.FC = () => {
   ]
 
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handleManageSubscription = () => {
     window.open('https://polar.sh/settings/subscriptions', '_blank')
@@ -102,17 +104,9 @@ const Profile: React.FC = () => {
   }
 
   const handleCancelSuccess = async () => {
-    // Refresh profile data without full page reload
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profile?.id)
-      .single()
-
-    if (!error && data) {
-      // For now, reload to update parent state
-      // In a production app, you'd use a callback or context to update state
-      window.location.reload()
+    // Fix #9: Refresh profile through context instead of full page reload
+    if (session) {
+      await fetchProfile(session as { user: { id: string; email?: string; user_metadata?: Record<string, string> } })
     }
   }
 
@@ -336,8 +330,29 @@ const Profile: React.FC = () => {
               "Information is the currency of the modern analyst. Strategy is the pattern in a stream of decisions."
             </p>
           </section>
+
+          {/* Danger Zone */}
+          <div className='mt-8 border border-red-200 dark:border-red-800 rounded-2xl p-6'>
+            <h3 className='text-sm font-bold uppercase tracking-widest text-red-500 mb-2'>
+              Danger Zone
+            </h3>
+            <p className='text-sm text-neutral-600 dark:text-neutral-400 mb-4'>
+              Permanently delete your account and all associated data. 
+              This action cannot be undone.
+            </p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className='px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950/30 transition'
+            >
+              Delete Account
+            </button>
+          </div>
         </div>
       </div>
+
+      {showDeleteModal && (
+        <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />
+      )}
 
       {/* Cancellation Modal */}
       <CancelSubscriptionModal

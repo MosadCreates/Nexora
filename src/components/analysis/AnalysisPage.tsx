@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { AnalysisStep, AnalysisReport } from '@/types'
+import * as Sentry from '@sentry/nextjs'
 import { analyzeWeakness } from '@/services/geminiService'
 import LoadingState from '@/components/analysis/LoadingState'
 import { LoadingIntelligence } from '@/components/analysis/LoadingIntelligence'
@@ -37,8 +38,15 @@ export const AnalysisPage: React.FC = () => {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
 
+  interface RecentAnalysis {
+    id: string
+    query: string
+    created_at: string
+    report: AnalysisReport
+  }
+
   // Dashboard state
-  const [analyses, setAnalyses] = useState<any[]>([])
+  const [analyses, setAnalyses] = useState<RecentAnalysis[]>([])
   const [loadingAnalyses, setLoadingAnalyses] = useState(true)
 
   const planConfig = getPlanConfig(effectivePlan)
@@ -65,15 +73,15 @@ export const AnalysisPage: React.FC = () => {
         if (error.message?.includes('Lock broken') || error.name === 'AbortError' || error.message?.includes('AbortError')) {
           return;
         }
-        console.error('❌ Error fetching recent analyses:', error)
+        Sentry.captureException(error)
       } else if (data) {
         setAnalyses(data)
       }
-    } catch (err: any) {
-        if (err?.name === 'AbortError' || err?.message?.includes('AbortError') || err?.message?.includes('Lock broken')) {
+    } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('AbortError') || err.message?.includes('Lock broken'))) {
           return;
         }
-      console.error('❌ Unexpected error in fetchRecentAnalyses:', err)
+      Sentry.captureException(err)
     } finally {
       setLoadingAnalyses(false)
     }
@@ -200,14 +208,14 @@ export const AnalysisPage: React.FC = () => {
       clearTimeout(clusteringTimeout)
       clearTimeout(scoringTimeout)
       const error = err instanceof Error ? err : new Error(String(err))
-      console.error('Analysis failed:', error.message)
+      Sentry.captureException(error)
       setError(getErrorMessage(error))
       setStep(AnalysisStep.ERROR)
     }
   }
 
   // Helper to format error messages
-  const getErrorMessage = (err: any) => {
+  const getErrorMessage = (err: Error) => {
     const msg = err.message || JSON.stringify(err)
     if (
       msg.includes('429') ||
@@ -296,6 +304,39 @@ export const AnalysisPage: React.FC = () => {
             loading={loadingAnalyses}
             onViewReport={a => router.push(`/report/${a.id}`)}
           />
+          {!loadingAnalyses && analyses.length === 0 && step === AnalysisStep.IDLE && (
+            <div className='max-w-2xl mx-auto px-4 py-12 text-center'>
+              <div className='w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6'>
+                <span className='text-3xl'>🔍</span>
+              </div>
+              <h3 className='text-xl font-semibold text-neutral-900 dark:text-white mb-3'>
+                Run your first analysis
+              </h3>
+              <p className='text-neutral-600 dark:text-neutral-400 mb-6 text-sm leading-relaxed'>
+                Enter a competitor name, product, or market above to get AI-powered intelligence on their positioning, weaknesses, and opportunities.
+              </p>
+              <div className='grid grid-cols-1 sm:grid-cols-3 gap-3 text-left max-w-lg mx-auto'>
+                {[
+                  { label: 'Try:', example: 'Analyze Notion competitors' },
+                  { label: 'Try:', example: 'Slack vs Teams market position' },
+                  { label: 'Try:', example: 'Figma competitive weaknesses' },
+                ].map((item) => (
+                  <button
+                    key={item.example}
+                    onClick={() => handleAnalyze(item.example)}
+                    className='p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 text-left hover:border-neutral-400 dark:hover:border-neutral-600 transition group'
+                  >
+                    <span className='text-xs text-neutral-400 block mb-1'>
+                      {item.label}
+                    </span>
+                    <span className='text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition'>
+                      {item.example}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className='max-w-7xl mx-auto px-4 py-8 pt-24'>

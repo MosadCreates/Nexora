@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "app/api/analyze/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/webhooks/polar/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/checkout/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/cancel-subscription/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}

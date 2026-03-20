@@ -1,35 +1,35 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { UserProfile } from '../types'
+import * as Sentry from '@sentry/nextjs'
 
 interface AuthContextType {
-  session: any
+  session: { user: { id: string; email?: string; user_metadata?: Record<string, string> }; access_token: string } | null
   profile: UserProfile | null
   loading: boolean
   error: string | null
-  fetchProfile: (session: any) => Promise<void>
+  fetchProfile: (session: { user: { id: string; email?: string; user_metadata?: Record<string, string> } }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider ({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<AuthContextType['session']>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProfile = async (currentSession: any) => {
+  const fetchProfile = useCallback(async (currentSession: { user: { id: string; email?: string; user_metadata?: Record<string, string> } }) => {
     if (!currentSession?.user) return
 
-    // Fix #14 (Audit 2): Removed console.log that exposed user ID
     const startTime = Date.now();
     
     // Create a promise with a timeout
     const fetchPromise = supabase
       .from('profiles')
-      .select('*')
+      .select('id, first_name, last_name, email, credits_used')
       .eq('id', currentSession.user.id)
       .single();
 
@@ -38,11 +38,12 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as any;
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as Awaited<typeof fetchPromise>;
+      const { data, error: fetchError } = result;
 
       if (
-        error &&
-        (error.code === 'PGRST116' || error.message?.includes('0 rows'))
+        fetchError &&
+        (fetchError.code === 'PGRST116' || fetchError.message?.includes('0 rows'))
       ) {
         // Create profile if missing
         const { data: newProfile, error: createError } = await supabase
@@ -53,24 +54,27 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
             first_name: currentSession.user.user_metadata?.first_name || '',
             last_name: currentSession.user.user_metadata?.last_name || ''
           })
-          .select()
+          .select('id, first_name, last_name, email, credits_used')
           .single()
 
         if (createError) {
           setError(`Failed to create profile: ${createError.message}`)
+          Sentry.captureException(createError)
         } else if (newProfile) {
-          setProfile(newProfile)
+          setProfile(newProfile as UserProfile)
         }
       } else if (data) {
-        setProfile(data)
-      } else if (error) {
-        setError(`Failed to fetch profile: ${error.message}`)
+        setProfile(data as UserProfile)
+      } else if (fetchError) {
+        setError(`Failed to fetch profile: ${fetchError.message}`)
+        Sentry.captureException(fetchError)
       }
-    } catch (err: any) {
-      // Fix #14 (Audit 2): Removed console.warn that exposed user details
-      // We don't block the app for profile fetch errors
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      setError('Unable to load your profile. Please refresh the page.')
+      Sentry.captureException(err)
     }
-  }
+  }, [])
 
   const initialized = useRef(false);
 
@@ -84,16 +88,19 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (mounted) {
-          setSession(initialSession);
+          setSession(initialSession as AuthContextType['session']);
           if (initialSession) {
-            await fetchProfile(initialSession);
+            await fetchProfile(initialSession as { user: { id: string; email?: string; user_metadata?: Record<string, string> } });
             localStorage.setItem('supabase-session-hint', 'true');
           }
         }
-      } catch (err: any) {
-        // Silent fail, handled by loading state
+      } catch (err: unknown) {
+        if (mounted) {
+          setError('Authentication initialization failed.')
+          Sentry.captureException(err)
+        }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
@@ -101,12 +108,12 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      setSession(newSession as AuthContextType['session']);
       
-      if (session) {
+      if (newSession) {
         localStorage.setItem('supabase-session-hint', 'true');
-        fetchProfile(session);
+        fetchProfile(newSession as { user: { id: string; email?: string; user_metadata?: Record<string, string> } });
       } else {
         setProfile(null);
         localStorage.removeItem('supabase-session-hint');
@@ -119,12 +126,18 @@ export function AuthProvider ({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     }
-  }, [])
+  }, [fetchProfile])
+
+  const value = useMemo(() => ({
+    session,
+    profile,
+    loading,
+    error,
+    fetchProfile
+  }), [session, profile, loading, error, fetchProfile])
 
   return (
-    <AuthContext.Provider
-      value={{ session, profile, loading, error, fetchProfile }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

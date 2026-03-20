@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import * as Sentry from '@sentry/nextjs'
 
 import { SubscriptionPlan } from '../../types'
 
@@ -57,7 +58,7 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
         data = await response.json()
       } else {
         const text = await response.text()
-        console.error('Non-JSON response received during cancellation:', text)
+        Sentry.captureException(new Error(`Non-JSON response during cancellation: ${response.status}`))
         throw new Error(
           `Server Error (${response.status}): Failed to process cancellation. Please contact support if the issue persists.`
         )
@@ -81,11 +82,12 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
         onCancelSuccess()
         onClose()
       }, 2000)
-    } catch (error: any) {
-      console.error('Cancellation error:', error)
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      Sentry.captureException(err)
       setStatus('error')
       setErrorMessage(
-        error.message || 'Failed to cancel subscription. Please try again.'
+        err.message || 'Failed to cancel subscription. Please try again.'
       )
       setIsProcessing(false)
     }

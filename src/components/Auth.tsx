@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AnimatedTooltip } from '@/components/ui/aceternity/animated-tooltip'
 import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
@@ -53,6 +53,33 @@ const people = [
   }
 ]
 
+// Fix #3: Map raw auth errors to user-friendly messages
+function getUserFriendlyError(error: Error): string {
+  const msg = error.message?.toLowerCase() || ''
+  if (msg.includes('invalid login credentials') || msg.includes('invalid password')) {
+    return 'Incorrect email or password. Please try again.'
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Please check your email and confirm your account before signing in.'
+  }
+  if (msg.includes('user already registered')) {
+    return 'An account with this email already exists. Try signing in instead.'
+  }
+  if (msg.includes('password') && msg.includes('characters')) {
+    return 'Password must be at least 6 characters long.'
+  }
+  if (msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'Too many attempts. Please wait a moment and try again.'
+  }
+  if (msg.includes('network') || msg.includes('fetch')) {
+    return 'Network error. Please check your connection and try again.'
+  }
+  if (msg.includes('timeout')) {
+    return 'The request timed out. Please check your connection and try again.'
+  }
+  return 'Something went wrong. Please try again.'
+}
+
 const Auth: React.FC = () => {
   const pathname = usePathname()
   const router = useRouter()
@@ -74,6 +101,9 @@ const Auth: React.FC = () => {
   // Determine if signup mode based on URL path
   const isSignUp = pathname === '/signup'
 
+  // Fix #14B: Ref for login timeout cleanup
+  const loginTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     // Reset form when switching between login/signup
     setEmail('')
@@ -83,6 +113,15 @@ const Auth: React.FC = () => {
     setMessage(null)
     setTurnstileToken(null)
   }, [pathname])
+
+  // Fix #14B: Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loginTimeoutRef.current) {
+        clearTimeout(loginTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Fix #10 (Audit 2): Verify Turnstile token server-side
   const verifyTurnstile = async (): Promise<boolean> => {
@@ -156,12 +195,12 @@ const Auth: React.FC = () => {
           password
         });
         
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Login timed out. Please check your connection.')), 15000)
-        );
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          loginTimeoutRef.current = setTimeout(() => reject(new Error('Login timed out. Please check your connection.')), 15000)
+        });
 
         try {
-          const { data, error } = (await Promise.race([loginPromise, timeoutPromise])) as any;
+          const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as Awaited<typeof loginPromise>;
           
           if (error) {
             throw error;
@@ -169,12 +208,13 @@ const Auth: React.FC = () => {
           
           // Fix #14 (Audit 2): Removed console.log of session details
           router.replace('/')
-        } catch (err: any) {
+        } catch (err: unknown) {
           throw err;
         }
       }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message })
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      setMessage({ type: 'error', text: getUserFriendlyError(err) })
     } finally {
       setLoading(false)
     }
@@ -191,8 +231,9 @@ const Auth: React.FC = () => {
         }
       })
       if (error) throw error
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message })
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      setMessage({ type: 'error', text: getUserFriendlyError(err) })
       setLoading(false)
     }
   }
@@ -216,8 +257,9 @@ const Auth: React.FC = () => {
         type: 'success',
         text: 'Check your email for the password reset link!'
       })
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message })
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      setMessage({ type: 'error', text: getUserFriendlyError(err) })
     } finally {
       setLoading(false)
     }
@@ -407,14 +449,14 @@ const Auth: React.FC = () => {
           <p className='mt-8 text-xs text-gray-500 dark:text-gray-400 text-center'>
             By clicking on {isSignUp ? 'sign up' : 'sign in'}, you agree to our{' '}
             <a
-              href='#'
+              href='/terms'
               className='underline hover:text-gray-700 dark:hover:text-gray-300'
             >
               Terms of Service
             </a>{' '}
             and{' '}
             <a
-              href='#'
+              href='/privacy'
               className='underline hover:text-gray-700 dark:hover:text-gray-300'
             >
               Privacy Policy
@@ -430,11 +472,11 @@ const Auth: React.FC = () => {
             <AnimatedTooltip items={people} isLogo={false} />
           </div>
           <p className='font-semibold text-xl text-center dark:text-neutral-400 text-neutral-600'>
-            Nexora is used by thousands of users
+            Trusted by analysts worldwide
           </p>
           <p className='font-normal text-base text-center text-neutral-500 dark:text-neutral-200 mt-8'>
-            With lots of AI applications around, Everything AI stands out with
-            its state of the art Shitposting capabilities.
+            Nexora uses advanced AI to uncover competitor weaknesses and
+            market opportunities — helping teams make smarter strategic decisions.
           </p>
         </div>
 

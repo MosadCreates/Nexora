@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { TextGenerateEffect } from '@/components/ui/aceternity/text-generate-effect'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface HeroSectionProps {
   onGetStarted?: () => void
@@ -75,14 +76,13 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
           >
             <div className="absolute inset-x-0 bottom-0 h-40 w-full bg-gradient-to-b from-transparent via-white to-white dark:via-black/50 dark:to-black scale-[1.1] pointer-events-none"></div>
             <div className="p-2 bg-white dark:bg-black dark:border-neutral-700 border border-neutral-200 rounded-[24px] overflow-hidden">
-              <img 
-                alt="Market Intelligence Dashboard" 
-                loading="lazy" 
-                width="1920" 
-                height="1080" 
-                decoding="async" 
-                className="rounded-[20px] w-full h-auto object-cover" 
+              <Image 
                 src="/header.webp"
+                alt="Market Intelligence Dashboard" 
+                priority
+                width={1920} 
+                height={1080} 
+                className="rounded-[20px] w-full h-auto object-cover" 
               />
             </div>
           </motion.div>

@@ -96,7 +96,7 @@ const AccessBadge: React.FC<{ access: FeatureAccess }> = ({ access }) => {
       }
     }
 
-  const colors = colorMap[access] || colorMap.limited
+  const colors = colorMap[access] || colorMap.limited!
   const label = access.charAt(0).toUpperCase() + access.slice(1)
 
   return (
@@ -130,7 +130,7 @@ export const PlanFeatureList: React.FC<PlanFeatureListProps> = ({
   return (
     <div className='space-y-1 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent pr-2'>
       {featureKeys.map((key, index) => {
-        const access = config.features[key]
+        const access = config.features[key]!
         const meta = FEATURE_METADATA[key]
         const icon = FEATURE_ICONS[key]
 
