@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     canonical: process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraintel.com',
   },
   verification: {
-    google: 'pCeGa4cdenAr1X3NoeHCMP_xrC_73lkISmpcoWhDWA4', // just the content value, not the full tag
+    google: '6BXhz6AmCs1B0bFsQKAu4qSR74KN6LH4_vDaSMHyIT4', // just the content value, not the full tag
   },
   openGraph: {
     title: "Nexora | See what's next in your market",
