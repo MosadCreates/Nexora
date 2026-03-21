@@ -503,12 +503,7 @@ const Auth: React.FC = () => {
 
           {/* google OAuth Button */}
           <button
-  onClick={() => supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/analysis`
-    }
-  })}
+  onClick={handleGoogleAuth}
   className="w-full flex items-center justify-center gap-3 py-3 bg-black dark:bg-white text-white dark:text-black font-normal rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-all text-sm"
 >
   <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
