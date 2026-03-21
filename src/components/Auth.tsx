@@ -509,12 +509,7 @@ const Auth: React.FC = () => {
       redirectTo: `${window.location.origin}/analysis`
     }
   })}
-  className="w-full flex items-center justify-center gap-3 
-             px-4 py-3 rounded-xl border border-neutral-300 
-             dark:border-neutral-700 bg-white dark:bg-neutral-900 
-             text-neutral-700 dark:text-neutral-300 font-medium 
-             text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 
-             transition"
+  className="w-full flex items-center justify-center gap-3 py-3 bg-black dark:bg-white text-white dark:text-black font-normal rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-all text-sm"
 >
   <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
     <path
