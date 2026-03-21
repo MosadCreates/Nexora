@@ -7,6 +7,7 @@ import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { Eye, EyeOff } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Turnstile } from '@marsidev/react-turnstile'
+import * as Sentry from '@sentry/nextjs'
 
 const people = [
   {
@@ -98,6 +99,10 @@ const Auth: React.FC = () => {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
+
   // Determine if signup mode based on URL path
   const isSignUp = pathname === '/signup'
 
@@ -123,7 +128,6 @@ const Auth: React.FC = () => {
     }
   }, [])
 
-  // Fix #10 (Audit 2): Verify Turnstile token server-side
   const verifyTurnstile = async (): Promise<boolean> => {
     if (!turnstileSiteKey) return true // Allow if Turnstile not configured
     if (!turnstileToken) {
@@ -149,6 +153,39 @@ const Auth: React.FC = () => {
     }
   }
 
+  const handleResendConfirmation = async () => {
+    try {
+      setResendLoading(true)
+      setResendSuccess(false)
+      
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/analysis`,
+        },
+      })
+      
+      if (error) {
+        Sentry.captureException(error)
+        setMessage({ 
+          type: 'error', 
+          text: 'Failed to resend email. Please try again.' 
+        })
+      } else {
+        setResendSuccess(true)
+        setMessage({ 
+          type: 'success', 
+          text: 'Confirmation email sent! Check your inbox.' 
+        })
+      }
+    } catch (err) {
+      Sentry.captureException(err)
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -163,17 +200,36 @@ const Auth: React.FC = () => {
       }
 
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
+        const signUpPromise = supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               first_name: firstName,
               last_name: lastName
-            }
+            },
+            emailRedirectTo: `${window.location.origin}/analysis`,
           }
         })
-        if (error) throw error
+        
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('signup_timeout')),
+            15000
+          )
+        )
+        
+        const { data, error } = await Promise.race([
+          signUpPromise,
+          timeoutPromise,
+        ]) as Awaited<ReturnType<typeof supabase.auth.signUp>>
+        
+        if (error) {
+          Sentry.captureException(error, {
+            tags: { action: 'signup', email_domain: email.split('@')[1] }
+          })
+          throw error
+        }
 
         if (data.session) {
           // If auto-sign-in is enabled (no email confirmation needed)
@@ -181,12 +237,10 @@ const Auth: React.FC = () => {
         } else {
           // Email confirmation required
           setMessage({
-            type: 'success',
-            text: 'Check your email for the confirmation link!'
+            type: 'success', 
+            text: "Account created! Check your email for a confirmation link. If it doesn't arrive within 5 minutes, use the resend button below."
           })
-          // Don't redirect immediately so they can read the message,
-          // but if they click login, they can switch tabs. The callback
-          // route will handle the actual redirect when they click the email link.
+          setNeedsEmailConfirmation(true)
         }
       } else {
         // Fix #14 (Audit 2): Removed console.log that exposed email
@@ -220,12 +274,12 @@ const Auth: React.FC = () => {
     }
   }
 
-  const handleGitHubAuth = async () => {
+  const handleGoogleAuth = async () => {
     setLoading(true)
     setMessage(null)
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
+        provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
         }
@@ -294,6 +348,21 @@ const Auth: React.FC = () => {
               }`}
             >
               {message.text}
+            </div>
+          )}
+
+          {needsEmailConfirmation && (
+            <div className='mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl'>
+              <p className='text-sm text-blue-700 dark:text-blue-300 mb-3'>
+                Check your inbox at <strong>{email}</strong> for a confirmation email.
+              </p>
+              <button
+                onClick={handleResendConfirmation}
+                disabled={resendLoading || resendSuccess}
+                className='text-sm font-medium text-blue-600 dark:text-blue-400 underline hover:no-underline disabled:opacity-50 disabled:cursor-not-allowed'
+              >
+                {resendLoading ? 'Sending...' : resendSuccess ? 'Email sent! ✓' : 'Resend confirmation email'}
+              </button>
             </div>
           )}
 
@@ -432,18 +501,41 @@ const Auth: React.FC = () => {
             </div>
           </div>
 
-          {/* GitHub OAuth Button */}
+          {/* google OAuth Button */}
           <button
-            type='button'
-            onClick={handleGitHubAuth}
-            disabled={loading}
-            className='w-full py-3 bg-black dark:bg-white text-white dark:text-black font-normal rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm'
-          >
-            <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
-              <path d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z' />
-            </svg>
-            Github
-          </button>
+  onClick={() => supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/analysis`
+    }
+  })}
+  className="w-full flex items-center justify-center gap-3 
+             px-4 py-3 rounded-xl border border-neutral-300 
+             dark:border-neutral-700 bg-white dark:bg-neutral-900 
+             text-neutral-700 dark:text-neutral-300 font-medium 
+             text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 
+             transition"
+>
+  <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+  Continue with Google
+</button>
 
           {/* Terms and Privacy */}
           <p className='mt-8 text-xs text-gray-500 dark:text-gray-400 text-center'>
