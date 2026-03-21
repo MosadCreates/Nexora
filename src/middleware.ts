@@ -1,15 +1,20 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// ── Routes that require authentication ──────────────────────────────
-const PROTECTED_ROUTES = [
+// Routes requiring cookie-based session (pages):
+const PROTECTED_PAGE_ROUTES = [
   '/analysis',
   '/profile',
   '/report',
   '/dashboard',
-  // '/api/analyze',
-  // '/api/checkout',
-  // '/api/cancel-subscription',
+]
+
+// API routes that need auth (return 401 at Edge for no token):
+const PROTECTED_API_ROUTES = [
+  '/api/analyze',
+  '/api/checkout',
+  '/api/cancel-subscription',
+  '/api/account/delete',
 ]
 
 // ── Routes that should redirect to /analysis if already logged in ──
@@ -41,6 +46,26 @@ export async function middleware(request: NextRequest) {
     request: { headers: request.headers },
   })
 
+  // At the TOP of the middleware function, before all other checks:
+  const maintenanceMode = process.env.MAINTENANCE_MODE === 'true'
+  const pathname = request.nextUrl.pathname
+
+  if (maintenanceMode) {
+    // Allow only the homepage and status page
+    const allowedInMaintenance = ['/', '/status', '/api/health']
+    const isAllowed = allowedInMaintenance.some(
+      path => pathname === path
+    )
+    
+    if (!isAllowed) {
+      // Redirect to homepage with maintenance message
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      url.searchParams.set('maintenance', 'true')
+      return NextResponse.redirect(url)
+    }
+  }
+
   // ── Create Supabase client in middleware ───────────────────────────
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,21 +95,36 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
-
-  // ── Protect authenticated routes ──────────────────────────────────
-  const isProtected = PROTECTED_ROUTES.some(
+  // Check API routes first — fast path
+  const isProtectedApi = PROTECTED_API_ROUTES.some(
     route => pathname === route || pathname.startsWith(route + '/')
   )
 
-  if (isProtected && !user) {
-    // API routes get 401, pages get redirected
-    if (pathname.startsWith('/api/')) {
+  if (isProtectedApi) {
+    // Check for Bearer token OR cookie session
+    const authHeader = request.headers.get('authorization')
+    const hasBearerToken = authHeader?.startsWith('Bearer ')
+    
+    if (!hasBearerToken && !user) {
+      // No auth at all — reject at Edge immediately
+      // This prevents spinning up the full serverless function
       return new NextResponse(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { 
+          status: 401, 
+          headers: { 'Content-Type': 'application/json' } 
+        }
       )
     }
+    // Has token or session — let it through to the route handler
+  }
+
+  // Check page routes:
+  const isProtectedPage = PROTECTED_PAGE_ROUTES.some(
+    route => pathname === route || pathname.startsWith(route + '/')
+  )
+
+  if (isProtectedPage && !user) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('redirect', pathname)

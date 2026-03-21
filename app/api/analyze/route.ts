@@ -126,37 +126,7 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // ── Fix #2: Pre-check credits BEFORE calling Gemini ────────────
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('credits_used')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profileData) {
-      return NextResponse.json(
-        { error: 'Unable to verify account status' },
-        { status: 403 }
-      )
-    }
-
-    // Get user's active plan from subscriptions
-    const { data: subscriptionData } = await supabaseAdmin
-      .from('subscriptions')
-      .select('plan_slug, status')
-      .eq('user_id', user.id)
-      .in('status', ['active', 'trialing'])
-      .maybeSingle()
-
-    const activePlan = subscriptionData?.plan_slug ?? 'hobby'
-    const maxCredits = MAX_CREDITS[activePlan] ?? 3
-
-    if (profileData.credits_used >= maxCredits) {
-      return NextResponse.json(
-        { error: 'No credits remaining. Please upgrade your plan.' },
-        { status: 403 }
-      )
-    }
+    // ── Pre-check logic removed (moved to after lock via reservation) ──
 
     // ── Fix #6: In-flight request lock ─────────────────────────────
     let lockAcquired = false
@@ -189,16 +159,38 @@ export async function POST(req: NextRequest) {
         const stream = new ReadableStream({
           async start(controller) {
             try {
-              await supabaseAdmin.rpc('save_analysis_atomically', {
-                p_user_id: user.id, p_query_text: trimmedQuery, p_analysis_result: cached
+              // Reserve credit BEFORE returning cached
+              const { error: reserveError } = await supabaseAdmin.rpc('reserve_analysis_credit', {
+                p_user_id: user.id,
               })
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, report: cached })}\n\n`))
-            } catch (rpcError: any) {
-              if (rpcError?.message?.includes('NO_CREDITS_REMAINING')) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' })}\n\n`))
-              } else {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis.' })}\n\n`))
+              
+              if (reserveError) {
+                if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' })}\n\n`))
+                } else {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Unable to verify account status.' })}\n\n`))
+                }
+                return
               }
+
+              const { error: saveError } = await supabaseAdmin
+                .from('analysis_history')
+                .insert({
+                  user_id: user.id,
+                  query: trimmedQuery,
+                  report: cached,
+                  created_at: new Date().toISOString(),
+                })
+              
+              if (saveError) {
+                await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis.' })}\n\n`))
+              } else {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, report: cached })}\n\n`))
+              }
+            } catch (err) {
+              await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis.' })}\n\n`))
             } finally {
               timer.stop({ cached: true })
               controller.close()
@@ -225,6 +217,20 @@ export async function POST(req: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           try {
+            // STEP 1: Reserve credit BEFORE Gemini call
+            const { data: reservation, error: reserveError } = await supabaseAdmin.rpc('reserve_analysis_credit', {
+              p_user_id: user.id,
+            })
+
+            if (reserveError) {
+              if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' })}\n\n`))
+              } else {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Unable to verify account status.' })}\n\n`))
+              }
+              return
+            }
+
             const modelName = 'gemini-2.5-flash'
             const apiVersion = 'v1beta'
             const prompt = `Analyze the following query for competitive weaknesses and opportunities: "${trimmedQuery}"\n\nRemember: Respond with ONLY valid JSON.`
@@ -277,26 +283,73 @@ export async function POST(req: NextRequest) {
             }
             
             try {
-               const { error: rpcError } = await supabaseAdmin.rpc('save_analysis_atomically', {
-                 p_user_id: user.id, p_query_text: trimmedQuery, p_analysis_result: finalReport
-               })
+               const { error: saveError } = await supabaseAdmin
+                 .from('analysis_history')
+                 .insert({
+                   user_id: user.id,
+                   query: trimmedQuery,
+                   report: finalReport,
+                   created_at: new Date().toISOString(),
+                 })
                
-               if (rpcError?.message?.includes('NO_CREDITS_REMAINING')) {
-                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' })}\n\n`))
+               if (saveError) {
+                 await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
+                 logger.error('[analyze] Failed to save', { error: saveError })
+                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis results.' })}\n\n`))
                } else {
                  await setCachedAnalysis(trimmedQuery, user.id, finalReport)
                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, report: finalReport })}\n\n`))
                }
             } catch (saveErr) {
+               await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
                logger.error('[analyze] Failed to save', { error: saveErr })
                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis results.' })}\n\n`))
             }
-          } catch (err: any) {
-            logger.error('[analyze] Stream error', { error: err.message })
-            if (err?.message?.includes('429') || err?.message?.includes('quota')) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'API quota exceeded. Please wait before trying again.' })}\n\n`))
+          } catch (err: unknown) {
+            // Refund the pre-decremented credit
+            await supabaseAdmin.rpc('refund_analysis_credit', {
+              p_user_id: user.id,
+            })
+            const error = err as { status?: number; message?: string }
+            if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('quota')) {
+              Sentry.captureMessage('Gemini API rate limit hit', {
+                level: 'warning',
+                tags: { source: 'gemini_stream' }
+              })
+              
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ 
+                    error: 'High demand — please try again in 60 seconds.',
+                    retryAfter: 60
+                  })}\n\n`
+                )
+              )
             } else {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Analysis failed. Please try again.' })}\n\n`))
+              const errObj = err instanceof Error ? err : new Error(String(err))
+              Sentry.captureException(errObj, {
+                tags: { 
+                  source: 'gemini_stream',
+                  userId: user.id,
+                },
+                extra: {
+                  query: trimmedQuery,
+                  errorMessage: errObj.message,
+                }
+              })
+              
+              logger.error('[analyze] Stream error', { 
+                error: errObj.message,
+                userId: user.id 
+              })
+              
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ 
+                    error: 'Analysis failed. Please try again.' 
+                  })}\n\n`
+                )
+              )
             }
           } finally {
             timer.stop({ cached: false, queryLength: trimmedQuery.length })

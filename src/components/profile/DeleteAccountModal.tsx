@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import * as Sentry from '@sentry/nextjs'
+import { supabase } from '@/lib/supabase'
 
 interface DeleteAccountModalProps {
   onClose: () => void
@@ -31,8 +32,11 @@ export function DeleteAccountModal({ onClose }: DeleteAccountModalProps) {
         return
       }
       
-      // Redirect to home after deletion
-      router.push('/?deleted=true')
+      // Sign out user locally to clear the session
+      await supabase.auth.signOut()
+      
+      // Force a hard reload to clear cached Server Component layouts
+      window.location.href = '/?deleted=true'
     } catch (err) {
       Sentry.captureException(err)
       setError('An unexpected error occurred. Please try again.')

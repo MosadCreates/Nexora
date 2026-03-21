@@ -38,6 +38,17 @@ export const AnalysisPage: React.FC = () => {
   // Fix #5: Post-checkout success UX
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
   const [processingPayment, setProcessingPayment] = useState(false)
+  
+  // ADD new state:
+  const [processingMessage, setProcessingMessage] = useState(
+    'Processing your payment...'
+  )
+  const processingPaymentRef = useRef(false)
+
+  // Keep ref in sync with state:
+  useEffect(() => {
+    processingPaymentRef.current = processingPayment
+  }, [processingPayment])
 
   // Fix #7: Rate Limit Countdown
   const [retryCountdown, setRetryCountdown] = useState(0)
@@ -144,16 +155,30 @@ export const AnalysisPage: React.FC = () => {
   useEffect(() => {
     if (searchParams.get('checkout') === 'success') {
       setProcessingPayment(true)
-      // Remove param from URL without reload
       window.history.replaceState({}, '', '/analysis')
-
-      // Show processing state, then transition to success after 2s
-      const timeout = setTimeout(() => {
-        setProcessingPayment(false)
-        setShowCheckoutSuccess(true)
-      }, 2000)
-
-      return () => clearTimeout(timeout)
+      
+      // Do NOT auto-clear after 2 seconds
+      // Instead, show progressive messages
+      const messages = [
+        { delay: 0, text: 'Processing your payment...' },
+        { delay: 5000, text: 'Confirming with payment provider...' },
+        { delay: 15000, text: 'Still waiting — this can take up to 30 seconds...' },
+        { delay: 30000, text: 'Taking longer than usual. Try refreshing if your plan doesn\'t update.' },
+      ]
+      
+      const timeouts: NodeJS.Timeout[] = []
+      
+      messages.forEach(({ delay, text }) => {
+        const t = setTimeout(() => {
+          if (processingPaymentRef.current) {
+            setProcessingMessage(text)
+          }
+        }, delay)
+        timeouts.push(t)
+      })
+      
+      // Store cleanup function
+      return () => timeouts.forEach(clearTimeout)
     }
   }, [searchParams])
 
@@ -317,11 +342,26 @@ export const AnalysisPage: React.FC = () => {
       {/* Fix #5: Post-checkout banners */}
       {processingPayment && (
         <div className='max-w-4xl mx-auto px-4 pt-24 pb-4'>
-          <div className='bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center gap-3'>
-            <div className='animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0' />
-            <p className='text-blue-700 dark:text-blue-300 font-medium text-sm'>
-              Processing your payment... Your plan will activate shortly.
-            </p>
+          <div className='bg-blue-50 dark:bg-blue-950/30 border 
+                          border-blue-200 dark:border-blue-800 
+                          rounded-xl p-4'>
+            <div className='flex items-center gap-3 mb-3'>
+              <div className='animate-spin h-5 w-5 border-2 
+                              border-blue-500 border-t-transparent 
+                              rounded-full flex-shrink-0' />
+              <p className='text-blue-700 dark:text-blue-300 
+                            font-medium text-sm'>
+                {processingMessage}
+              </p>
+            </div>
+            {/* Show refresh button */}
+            <button
+              onClick={() => window.location.reload()}
+              className='text-xs text-blue-600 dark:text-blue-400 
+                         underline hover:no-underline'
+            >
+              Refresh page
+            </button>
           </div>
         </div>
       )}

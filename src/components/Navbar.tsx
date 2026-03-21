@@ -56,6 +56,7 @@ const UserMenu = ({
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setIsOpen(false)
+    window.location.href = '/'
   }
 
   const initial =

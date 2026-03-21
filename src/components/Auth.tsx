@@ -55,9 +55,12 @@ const people = [
 ]
 
 // Fix #3: Map raw auth errors to user-friendly messages
-function getUserFriendlyError(error: Error): string {
+function getUserFriendlyError (error: Error): string {
   const msg = error.message?.toLowerCase() || ''
-  if (msg.includes('invalid login credentials') || msg.includes('invalid password')) {
+  if (
+    msg.includes('invalid login credentials') ||
+    msg.includes('invalid password')
+  ) {
     return 'Incorrect email or password. Please try again.'
   }
   if (msg.includes('email not confirmed')) {
@@ -131,7 +134,10 @@ const Auth: React.FC = () => {
   const verifyTurnstile = async (): Promise<boolean> => {
     if (!turnstileSiteKey) return true // Allow if Turnstile not configured
     if (!turnstileToken) {
-      setMessage({ type: 'error', text: 'Please complete the CAPTCHA verification' })
+      setMessage({
+        type: 'error',
+        text: 'Please complete the CAPTCHA verification'
+      })
       return false
     }
 
@@ -139,16 +145,22 @@ const Auth: React.FC = () => {
       const response = await fetch('/api/auth/verify-captcha', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: turnstileToken }),
+        body: JSON.stringify({ token: turnstileToken })
       })
       const result = await response.json()
       if (!result.success) {
-        setMessage({ type: 'error', text: result.error || 'CAPTCHA verification failed' })
+        setMessage({
+          type: 'error',
+          text: result.error || 'CAPTCHA verification failed'
+        })
         return false
       }
       return true
     } catch {
-      setMessage({ type: 'error', text: 'CAPTCHA verification failed. Please try again.' })
+      setMessage({
+        type: 'error',
+        text: 'CAPTCHA verification failed. Please try again.'
+      })
       return false
     }
   }
@@ -157,26 +169,26 @@ const Auth: React.FC = () => {
     try {
       setResendLoading(true)
       setResendSuccess(false)
-      
+
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/analysis`,
-        },
+          emailRedirectTo: `${window.location.origin}/analysis`
+        }
       })
-      
+
       if (error) {
         Sentry.captureException(error)
-        setMessage({ 
-          type: 'error', 
-          text: 'Failed to resend email. Please try again.' 
+        setMessage({
+          type: 'error',
+          text: 'Failed to resend email. Please try again.'
         })
       } else {
         setResendSuccess(true)
-        setMessage({ 
-          type: 'success', 
-          text: 'Confirmation email sent! Check your inbox.' 
+        setMessage({
+          type: 'success',
+          text: 'Confirmation email sent! Check your inbox.'
         })
       }
     } catch (err) {
@@ -208,22 +220,19 @@ const Auth: React.FC = () => {
               first_name: firstName,
               last_name: lastName
             },
-            emailRedirectTo: `${window.location.origin}/analysis`,
+            emailRedirectTo: `${window.location.origin}/analysis`
           }
         })
-        
+
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error('signup_timeout')),
-            15000
-          )
+          setTimeout(() => reject(new Error('signup_timeout')), 15000)
         )
-        
-        const { data, error } = await Promise.race([
+
+        const { data, error } = (await Promise.race([
           signUpPromise,
-          timeoutPromise,
-        ]) as Awaited<ReturnType<typeof supabase.auth.signUp>>
-        
+          timeoutPromise
+        ])) as Awaited<ReturnType<typeof supabase.auth.signUp>>
+
         if (error) {
           Sentry.captureException(error, {
             tags: { action: 'signup', email_domain: email.split('@')[1] }
@@ -237,7 +246,7 @@ const Auth: React.FC = () => {
         } else {
           // Email confirmation required
           setMessage({
-            type: 'success', 
+            type: 'success',
             text: "Account created! Check your email for a confirmation link. If it doesn't arrive within 5 minutes, use the resend button below."
           })
           setNeedsEmailConfirmation(true)
@@ -247,23 +256,32 @@ const Auth: React.FC = () => {
         const loginPromise = supabase.auth.signInWithPassword({
           email,
           password
-        });
-        
+        })
+
         const timeoutPromise = new Promise<never>((_, reject) => {
-          loginTimeoutRef.current = setTimeout(() => reject(new Error('Login timed out. Please check your connection.')), 15000)
-        });
+          loginTimeoutRef.current = setTimeout(
+            () =>
+              reject(
+                new Error('Login timed out. Please check your connection.')
+              ),
+            15000
+          )
+        })
 
         try {
-          const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as Awaited<typeof loginPromise>;
-          
+          const { data, error } = (await Promise.race([
+            loginPromise,
+            timeoutPromise
+          ])) as Awaited<typeof loginPromise>
+
           if (error) {
-            throw error;
+            throw error
           }
-          
+
           // Fix #14 (Audit 2): Removed console.log of session details
           router.replace('/')
         } catch (err: unknown) {
-          throw err;
+          throw err
         }
       }
     } catch (error: unknown) {
@@ -354,14 +372,19 @@ const Auth: React.FC = () => {
           {needsEmailConfirmation && (
             <div className='mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl'>
               <p className='text-sm text-blue-700 dark:text-blue-300 mb-3'>
-                Check your inbox at <strong>{email}</strong> for a confirmation email.
+                Check your inbox at <strong>{email}</strong> for a confirmation
+                email.
               </p>
               <button
                 onClick={handleResendConfirmation}
                 disabled={resendLoading || resendSuccess}
                 className='text-sm font-medium text-blue-600 dark:text-blue-400 underline hover:no-underline disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                {resendLoading ? 'Sending...' : resendSuccess ? 'Email sent! ✓' : 'Resend confirmation email'}
+                {resendLoading
+                  ? 'Sending...'
+                  : resendSuccess
+                  ? 'Email sent! ✓'
+                  : 'Resend confirmation email'}
               </button>
             </div>
           )}
@@ -458,7 +481,7 @@ const Auth: React.FC = () => {
               <div className='flex justify-center'>
                 <Turnstile
                   siteKey={turnstileSiteKey}
-                  onSuccess={(token) => setTurnstileToken(token)}
+                  onSuccess={token => setTurnstileToken(token)}
                   onExpire={() => setTurnstileToken(null)}
                   onError={() => setTurnstileToken(null)}
                 />
@@ -503,29 +526,29 @@ const Auth: React.FC = () => {
 
           {/* google OAuth Button */}
           <button
-  onClick={handleGoogleAuth}
-  className="w-full flex items-center justify-center gap-3 py-3 bg-black dark:bg-white text-white dark:text-black font-normal rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-all text-sm"
->
-  <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
-    <path
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      fill="#4285F4"
-    />
-    <path
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      fill="#34A853"
-    />
-    <path
-      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-      fill="#FBBC05"
-    />
-    <path
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      fill="#EA4335"
-    />
-  </svg>
-  Continue with Google
-</button>
+            onClick={handleGoogleAuth}
+            className='w-full flex items-center justify-center gap-3 py-3 bg-black dark:bg-white text-white dark:text-black font-normal rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-all text-sm'
+          >
+            <svg viewBox='0 0 24 24' className='w-5 h-5' aria-hidden='true'>
+              <path
+                d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'
+                fill='#4285F4'
+              />
+              <path
+                d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'
+                fill='#34A853'
+              />
+              <path
+                d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z'
+                fill='#FBBC05'
+              />
+              <path
+                d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'
+                fill='#EA4335'
+              />
+            </svg>
+            Continue with Google
+          </button>
 
           {/* Terms and Privacy */}
           <p className='mt-8 text-xs text-gray-500 dark:text-gray-400 text-center'>
@@ -557,8 +580,8 @@ const Auth: React.FC = () => {
             Trusted by analysts worldwide
           </p>
           <p className='font-normal text-base text-center text-neutral-500 dark:text-neutral-200 mt-8'>
-            Nexora uses advanced AI to uncover competitor weaknesses and
-            market opportunities — helping teams make smarter strategic decisions.
+            Nexora uses advanced AI to uncover competitor weaknesses and market
+            opportunities — helping teams make smarter strategic decisions.
           </p>
         </div>
 
