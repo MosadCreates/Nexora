@@ -131,7 +131,7 @@ export function Footer () {
                 >
                   <svg
                     viewBox='0 0 24 24'
-                    className='w-5 h-5'
+                    className='w-5 h-5 text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors fill-current'
                     fill='currentColor'
                     aria-hidden='true'
                   >
