@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string;
   credits_used: number;
   created_at: string;
+  tour_completed?: boolean;
 }
 
 export interface Weakness {

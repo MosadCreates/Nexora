@@ -140,7 +140,7 @@ export function RecentAnalyses ({
   }
 
   return (
-    <div className='relative bg-white dark:bg-black py-24 min-h-[900px] overflow-hidden'>
+    <div data-tour="history-list" className='relative bg-white dark:bg-black py-24 min-h-[900px] overflow-hidden'>
       {/* Background Beams - Match DashboardHero */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
         <BackgroundBeams className='absolute inset-0 opacity-40' />

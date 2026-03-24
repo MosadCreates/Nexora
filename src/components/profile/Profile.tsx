@@ -28,11 +28,13 @@ import { DeleteAccountModal } from './DeleteAccountModal'
 
 import { useSubscription } from '../../hooks/useSubscription'
 import { resolveEffectivePlan } from '../../lib/accessControl'
+import { useTour } from '../../hooks/useTour'
 
 const Profile: React.FC = () => {
   const { session, profile, fetchProfile } = useAuth()
   const { subscription, effectivePlan, loading: subLoading } = useSubscription()
   const router = useRouter()
+  const { startTour } = useTour()
 
   const currentPlan = effectivePlan
   const planConfig = getPlanConfig(currentPlan)
@@ -330,6 +332,15 @@ const Profile: React.FC = () => {
               "Information is the currency of the modern analyst. Strategy is the pattern in a stream of decisions."
             </p>
           </section>
+
+          <div className='flex justify-center'>
+            <button
+              onClick={() => startTour()}
+              className="text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition flex items-center gap-2"
+            >
+              <span>↺</span> Restart product tour
+            </button>
+          </div>
 
           {/* Danger Zone */}
           <div className='mt-8 border border-red-200 dark:border-red-800 rounded-2xl p-6'>

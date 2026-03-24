@@ -67,6 +67,7 @@ const UserMenu = ({
   return (
     <div className='relative' ref={menuRef}>
       <button
+        data-tour="profile-button"
         onClick={() => setIsOpen(!isOpen)}
         className='flex items-center p-0.5 rounded-full border border-neutral-200 dark:border-white/10 bg-white/50 dark:bg-black/50 backdrop-blur-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-200 group relative z-10'
       >
@@ -282,7 +283,7 @@ function Navbar ({
                   </Link>
                 )}
                 {credits !== undefined && (
-                  <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold whitespace-nowrap'>
+                  <div data-tour="credits-counter" className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold whitespace-nowrap'>
                     <Sparkles className='w-3 h-3' />
                     <span>{credits} Credits</span>
                   </div>

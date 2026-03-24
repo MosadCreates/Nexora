@@ -400,6 +400,8 @@ export const AnalysisPage: React.FC = () => {
                 remainingCredits={remainingCredits}
               />
             </div>
+            {/* Dummy anchor for download-button when no report exists */}
+            <div data-tour="download-button" className="absolute top-4 right-4 w-10 h-10 pointer-events-none opacity-0" />
           </div>
           <RecentAnalyses
             analyses={analyses}
@@ -407,7 +409,7 @@ export const AnalysisPage: React.FC = () => {
             onViewReport={a => router.push(`/report/${a.id}`)}
           />
           {!loadingAnalyses && analyses.length === 0 && step === AnalysisStep.IDLE && (
-            <div className='max-w-2xl mx-auto px-4 py-12 text-center'>
+            <div data-tour="results-area" className='max-w-2xl mx-auto px-4 py-12 text-center'>
               <div className='w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6'>
                 <span className='text-3xl'>🔍</span>
               </div>

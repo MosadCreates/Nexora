@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { CookieConsentBanner } from '@/components/CookieConsent'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { TourOverlay } from '@/components/onboarding/TourOverlay'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -150,6 +151,7 @@ export default function RootLayout({
           <AuthProvider>
             <PageTransition />
             {children}
+            <TourOverlay />
           </AuthProvider>
         </ThemeProvider>
         <CookieConsentBanner />
