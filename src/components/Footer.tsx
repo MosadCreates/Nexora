@@ -109,8 +109,9 @@ export function Footer () {
                   </svg>
                 </Link>
                 <Link
-                  href='#'
+                  href='https://reddit.com/r/nexoraintel'
                   target='_blank'
+                  rel='noopener noreferrer'
                   aria-label='Join Nexora on Reddit'
                   className='text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition'
                 >
