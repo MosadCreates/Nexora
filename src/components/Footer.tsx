@@ -95,8 +95,9 @@ export function Footer () {
               </p>
               <div className='flex gap-4 items-center'>
                 <Link
-                  href='#'
+                  href='https://x.com/NexoraI19729'
                   target='_blank'
+                  rel='noopener noreferrer'
                   aria-label='Follow Nexora on X (Twitter)'
                   className='text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition'
                 >
