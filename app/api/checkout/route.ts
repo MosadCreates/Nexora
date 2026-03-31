@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import * as Sentry from '@sentry/nextjs'
 import { logger } from '@/lib/logger'
 import { checkoutLimiter, applyRateLimit } from '@/lib/rateLimit'
@@ -35,24 +36,46 @@ export async function POST(req: NextRequest) {
   const timer = new PerformanceTimer('api/checkout')
   try {
     // ── Authentication ─────────────────────────────────────────────
+    // Prefer Bearer token (from client JS), fall back to cookie session
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let user: { id: string; email?: string } | null = null
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      )
+      const { data, error } = await supabase.auth.getUser()
+      if (!error && data.user) user = data.user
+    } else {
+      // Cookie-based fallback (works when accessToken prop wasn't passed)
+      const cookieHeader = req.headers.get('cookie') ?? ''
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => {
+              return cookieHeader
+                .split(';')
+                .map(c => c.trim())
+                .filter(Boolean)
+                .map(c => {
+                  const idx = c.indexOf('=')
+                  return { name: c.slice(0, idx), value: c.slice(idx + 1) }
+                })
+            },
+            setAll: () => {},
+          },
+        }
+      )
+      const { data, error } = await supabase.auth.getUser()
+      if (!error && data.user) user = data.user
     }
-    const token = authHeader.replace('Bearer ', '')
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    )
-
-    const {
-      data: { user },
-      error: authError
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

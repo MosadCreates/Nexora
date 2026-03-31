@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { GridBackground } from '../ui/aceternity/background-grid'
@@ -8,6 +8,7 @@ import { TrustedBy } from '../Home/TrustedBy'
 import { useRouter } from 'next/navigation'
 import { SubscriptionPlan } from '@/types'
 import * as Sentry from '@sentry/nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface PricingCardsProps {
   currentPlan?: SubscriptionPlan
@@ -22,11 +23,30 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onUpgrade,
   userEmail,
   userId,
-  accessToken
+  accessToken: accessTokenProp
 }) => {
   const [billPlan, setBillPlan] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
+  const [sessionToken, setSessionToken] = useState<string | undefined>(accessTokenProp)
+  const [sessionEmail, setSessionEmail] = useState<string | undefined>(userEmail)
+  const [sessionUserId, setSessionUserId] = useState<string | undefined>(userId)
   const router = useRouter()
+
+  // Self-fetch session so this component works even when the parent
+  // page is statically rendered and passes no auth props.
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionToken(session.access_token)
+        setSessionEmail(session.user.email ?? undefined)
+        setSessionUserId(session.user.id)
+      }
+    })
+  }, [])
 
   const handleUpgrade = async (
     planId: SubscriptionPlan
@@ -44,7 +64,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
     }
 
     // Check if user is logged in
-    if (!userEmail || !userId) {
+    if (!sessionEmail || !sessionUserId) {
       router.push('/login')
       return
     }
@@ -73,7 +93,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+          ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {})
         },
         body: JSON.stringify({
           productId: targetProductId,
