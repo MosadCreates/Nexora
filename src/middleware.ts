@@ -30,14 +30,14 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Cross-Origin-Resource-Policy': 'same-origin',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   'Content-Security-Policy': [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com https://www.every-ai.com https://assets.aceternity.com https://github.com https://www.google.com https://avatars.githubusercontent.com https://api.iconify.design",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://o4509996976242688.ingest.de.sentry.io https://challenges.cloudflare.com",
-    "font-src 'self'",
-    "frame-src https://challenges.cloudflare.com",
-  ].join('; '),
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://images.unsplash.com https://www.every-ai.com https://assets.aceternity.com https://github.com https://avatars.githubusercontent.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://o4509996976242688.ingest.de.sentry.io https://challenges.cloudflare.com https://static.cloudflareinsights.com",
+  "font-src 'self'",
+  "frame-src https://challenges.cloudflare.com",
+].join('; '),
 }
 
 export async function middleware(request: NextRequest) {
