@@ -23,6 +23,8 @@ function isValidRedirectUrl(url: string): boolean {
     const parsed = new URL(url)
     const allowedOrigins = [
       process.env.NEXT_PUBLIC_APP_URL,
+      'https://www.nexoraintel.com',
+      'https://nexoraintel.com',
       'http://localhost:3000',
       'http://localhost:3001',
     ].filter(Boolean)
