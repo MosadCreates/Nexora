@@ -41,6 +41,7 @@ const people = [
 export const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -58,6 +59,7 @@ export const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError(null)
 
     try {
       const response = await fetch(
@@ -78,9 +80,13 @@ export const Contact = () => {
       if (response.ok) {
         setIsSubmitted(true)
         setFormData({ name: '', email: '', company: '', message: '' })
+      } else {
+        const data = await response.json()
+        setError(data.message || 'Something went wrong. Please try again.')
       }
-    } catch (error) {
-      Sentry.captureException(error)
+    } catch (err) {
+      Sentry.captureException(err)
+      setError('Failed to send message. Please check your connection.')
     } finally {
       setIsSubmitting(false)
     }
@@ -193,6 +199,16 @@ export const Contact = () => {
                   >
                     {isSubmitting ? 'Sending...' : 'Submit'}
                   </button>
+
+                  {error && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className='text-red-500 text-sm text-center mt-4 font-medium'
+                    >
+                      {error}
+                    </motion.p>
+                  )}
                 </form>
 
                 <div className='flex gap-6 mt-12 items-center justify-center md:justify-start'>
