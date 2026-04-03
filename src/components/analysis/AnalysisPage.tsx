@@ -22,6 +22,60 @@ import { AnalyzePanel } from '@/components/dashboard/AnalyzePanel'
 import { RecentAnalyses } from '@/components/dashboard/RecentAnalyses'
 import { getPlanConfig } from '@/lib/planFeatures'
 
+declare global {
+  interface Window {
+    puter: any;
+  }
+}
+
+const SYSTEM_INSTRUCTION = `
+You are an expert competitive intelligence analyst. Your goal is to identify systematic product weaknesses that represent genuine business opportunities by analyzing real user feedback.
+
+Follow this Research Protocol strictly:
+1. Use Google Search to find high-signal sources: Reddit, G2, Capterra, Trustpilot, App Store, ProductHunt, Hacker News.
+2. Extract specific complaints, frequency indicators, intensity signals ("dealbreaker", "switching"), and workaround mentions.
+3. Group similar complaints into weakness patterns.
+4. Assess Frequency, Pain Intensity, Monetization Potential, and Competitive Moat.
+
+IMPORTANT: You MUST return the analysis ONLY as valid JSON (no markdown, no explanation text) in this exact format:
+{
+  "executiveSummary": "string",
+  "weaknessMatrix": [
+    {
+      "name": "string",
+      "frequency": "High|Medium|Low",
+      "frequencyPercentage": "string",
+      "painIntensity": "Severe|Moderate|Mild",
+      "opportunityScore": number (1-5),
+      "quotes": ["string"],
+      "significance": "string",
+      "competitorsAffected": [{"name": "string", "failureMode": "string"}],
+      "monetizationSignals": "string"
+    }
+  ],
+  "comparisonTable": [
+    {
+      "weakness": "string",
+      "frequency": "string",
+      "pain": "string",
+      "moat": "string",
+      "opportunityScore": number,
+      "whyBuildThis": "string"
+    }
+  ],
+  "strategicRecommendations": {
+    "strongestOpportunity": "string",
+    "quickWinAlternative": "string",
+    "redFlags": "string"
+  },
+  "validationNextSteps": ["string"],
+  "sources": [{"title": "string (name of the source)", "uri": "string (full URL)"}]
+}
+
+Avoid generic ratings. Be specific (e.g., "can't bulk-edit tasks on mobile" vs "poor UX"). Focus on paying users.
+CRITICAL: In the "sources" array, include ALL URLs you referenced or found during your research. Each source must have a descriptive "title" and a valid full "uri". Include at least 5-10 sources.
+`;
+
 export const AnalysisPage: React.FC = () => {
   const { session, profile, loading: authLoading, fetchProfile } = useAuth()
   const { subscription, effectivePlan, loading: subLoading } = useSubscription()
@@ -213,86 +267,67 @@ export const AnalysisPage: React.FC = () => {
         throw new Error('Authentication required')
       }
 
-      const response = await fetch('/api/analyze', {
+      // ── Use Puter.js for generation ──
+      if (typeof window.puter === 'undefined') {
+        throw new Error('Analysis engine failed to load. Please refresh the page.')
+      }
+
+      const prompt = `System: ${SYSTEM_INSTRUCTION}\n\nUser: Please analyze the following query for competitive weaknesses and opportunities: "${queryText}"\n\nRemember: Respond with ONLY valid JSON.`
+      
+      const flashResponse = await window.puter.ai.chat(
+        prompt,
+        {
+          model: 'gemini-3.1-pro-preview',
+          stream: true
+        }
+      );
+
+      let fullText = ''
+      for await (const part of flashResponse) {
+        if (part?.text) {
+          fullText += part.text
+          setStreamedText(prev => prev + part.text)
+        }
+      }
+
+      // ── Parse and Save ──
+      let rawText = fullText.trim()
+      if (rawText.startsWith('```json')) rawText = rawText.substring(7)
+      else if (rawText.startsWith('```')) rawText = rawText.substring(3)
+      if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3)
+      rawText = rawText.trim()
+
+      let finalReportData;
+      try {
+        finalReportData = JSON.parse(rawText)
+      } catch (e) {
+        throw new Error('Failed to parse analysis results. Please retry.')
+      }
+
+      // Save to our backend
+      const saveResponse = await fetch('/api/save-analysis', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
-        body: JSON.stringify({ query: queryText }),
+        body: JSON.stringify({ query: queryText, report: finalReportData }),
       })
-      
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || 'Analysis failed')
+
+      if (!saveResponse.ok) {
+        const data = await saveResponse.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to save analysis')
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
+      const { id: analysisId } = await saveResponse.json()
       
-      if (!reader) throw new Error('No response stream')
-      
-      let buffer = ''
-      let finalReportData: any = null
-      
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n\n')
-        buffer = lines.pop() || ''
-        
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          
-          try {
-            const data = JSON.parse(line.slice(6))
-            
-            if (data.chunk) {
-              setStreamedText(prev => prev + data.chunk)
-            }
-            
-            if (data.error) {
-              throw new Error(data.error)
-            }
-            
-            if (data.done && data.report) {
-              finalReportData = data.report
-              setReport(data.report)
-            }
-          } catch (parseErr) {
-            // skip malformed
-          }
-        }
-      }
-
       if (session) {
         fetchProfile(session)
       }
 
-      if (finalReportData) {
-        // Fetch latest analysis to get the ID for redirect
-        let analysisId: string | null = null
-        if (session?.user?.id) {
-          const { data } = await supabase
-            .from('analysis_history')
-            .select('id')
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-
-          if (data) {
-            analysisId = data.id
-          }
-        }
-        
-        setStep(AnalysisStep.COMPLETED)
-        router.push(analysisId ? `/report/${analysisId}` : '/report')
-      } else {
-        throw new Error('Analysis completed but no report was returned.')
-      }
+      setReport(finalReportData)
+      setStep(AnalysisStep.COMPLETED)
+      router.push(analysisId ? `/report/${analysisId}` : '/report')
       
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err))
