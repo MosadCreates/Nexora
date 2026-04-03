@@ -145,6 +145,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <StructuredData />
+        <script src="https://js.puter.com/v2/"></script>
       </head>
       <body className={`${inter.variable} ${outfit.variable} antialiased font-inter`}>
         <ThemeProvider>
