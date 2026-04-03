@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { AnalysisStep, AnalysisReport } from '@/types'
 import * as Sentry from '@sentry/nextjs'
-import { analyzeWeakness } from '@/services/geminiService'
+import { analyzeWithPuter } from '@/services/puterAIService'
 import LoadingState from '@/components/analysis/LoadingState'
 import { LoadingIntelligence } from '@/components/analysis/LoadingIntelligence'
 import { LoaderTwo } from '@/components/ui/loader'
@@ -208,7 +208,8 @@ export const AnalysisPage: React.FC = () => {
         throw new Error('Authentication required')
       }
 
-      const response = await fetch('/api/analyze', {
+      // 1. Preflight check (auth, rate limits, credits, lock)
+      const preflightRes = await fetch('/api/analyze/preflight', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -217,78 +218,58 @@ export const AnalysisPage: React.FC = () => {
         body: JSON.stringify({ query: queryText }),
       })
       
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || 'Analysis failed')
+      if (!preflightRes.ok) {
+        const data = await preflightRes.json().catch(() => ({}))
+        throw new Error(data.error || 'Check failed. Please try again.')
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      
-      if (!reader) throw new Error('No response stream')
-      
-      let buffer = ''
-      let finalReportData: any = null
-      
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      const { lockKey } = await preflightRes.json()
+
+      // 2. Call Puter AI client-side
+      let currentLength = 0
+      const finalReportData = await analyzeWithPuter(queryText, (chunk) => {
+        setStreamedText((prev) => prev + chunk)
         
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n\n')
-        buffer = lines.pop() || ''
-        
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          
-          try {
-            const data = JSON.parse(line.slice(6))
-            
-            if (data.chunk) {
-              setStreamedText(prev => prev + data.chunk)
-            }
-            
-            if (data.error) {
-              throw new Error(data.error)
-            }
-            
-            if (data.done && data.report) {
-              finalReportData = data.report
-              setReport(data.report)
-            }
-          } catch (parseErr) {
-            // skip malformed
-          }
+        // Very basic heuristic to advance UI steps based on stream length
+        currentLength += chunk.length
+        if (currentLength > 500 && step === AnalysisStep.RESEARCHING) {
+          setStep(AnalysisStep.CLUSTERING)
+        } else if (currentLength > 1500 && step === AnalysisStep.CLUSTERING) {
+          setStep(AnalysisStep.SCORING)
         }
+      })
+      
+      setReport(finalReportData)
+
+      // 3. Save to server and decrement credit
+      const saveRes = await fetch('/api/analyze/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ 
+          query: queryText, 
+          report: finalReportData,
+          lockKey 
+        })
+      })
+
+      if (!saveRes.ok) {
+         const data = await saveRes.json().catch(() => ({}))
+         throw new Error(data.error || 'Failed to save analysis')
       }
+
+      const { id: savedAnalysisId } = await saveRes.json()
+      
+
 
       if (session) {
         fetchProfile(session)
       }
 
-      if (finalReportData) {
-        // Fetch latest analysis to get the ID for redirect
-        let analysisId: string | null = null
-        if (session?.user?.id) {
-          const { data } = await supabase
-            .from('analysis_history')
-            .select('id')
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-
-          if (data) {
-            analysisId = data.id
-          }
-        }
-        
-        setStep(AnalysisStep.COMPLETED)
-        router.push(analysisId ? `/report/${analysisId}` : '/report')
-      } else {
-        throw new Error('Analysis completed but no report was returned.')
-      }
-      
+      setStep(AnalysisStep.COMPLETED)
+      router.push(savedAnalysisId ? `/report/${savedAnalysisId}` : '/report')
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err))
       Sentry.captureException(error)

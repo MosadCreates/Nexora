@@ -8,6 +8,7 @@ import { CookieConsentBanner } from '@/components/CookieConsent'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { TourOverlay } from '@/components/onboarding/TourOverlay'
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -145,6 +146,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <StructuredData />
+        <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
       </head>
       <body className={`${inter.variable} ${outfit.variable} antialiased font-inter`}>
         <ThemeProvider>
