@@ -72,8 +72,7 @@ async function streamWithFallback(
   encoder: TextEncoder
 ): Promise<string> {
   const models = [
-    'claude-3-5-haiku-20241022',  // Primary — cheapest
-    'claude-3-5-sonnet-20241022', // Fallback — better quality
+    'claude-haiku-4-5-20251001',  // Primary
   ]
 
   let lastError: unknown
