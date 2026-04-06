@@ -12,13 +12,90 @@ import { AnalysisReport } from '@/types'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-// ── Fix #1 + #6: Module-level singleton — instantiated once, not per request ──
+// Module-level singleton — instantiated once, not per request
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
+// ── Credit helpers (direct table ops — bypasses SQL RPC permission issues) ──
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AdminDb = any
+
+async function reserveCredit(
+  db: AdminDb,
+  userId: string
+): Promise<{ error: string | null }> {
+  // Fetch profile
+  const { data: profile, error: profileErr } = await db
+    .from('profiles')
+    .select('credits_used')
+    .eq('id', userId)
+    .single()
+
+  if (profileErr || !profile) {
+    logger.error('[analyze] profile fetch failed', { userId, error: profileErr?.message })
+    return { error: 'Profile not found' }
+  }
+
+  // Fetch active subscription (optional — defaults to hobby)
+  const { data: subscription } = await db
+    .from('subscriptions')
+    .select('plan_slug')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing'])
+    .limit(1)
+    .maybeSingle()
+
+  const planSlug: string = (subscription as { plan_slug?: string } | null)?.plan_slug || 'hobby'
+  const maxCredits: number = MAX_CREDITS[planSlug] ?? 3
+
+  if ((profile as { credits_used: number }).credits_used >= maxCredits) {
+    return { error: 'NO_CREDITS_REMAINING' }
+  }
+
+  const currentCredits = (profile as { credits_used: number }).credits_used
+
+  // Increment credits_used
+  const { error: updateErr } = await db
+    .from('profiles')
+    .update({
+      credits_used: currentCredits + 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+
+  if (updateErr) {
+    logger.error('[analyze] credits_used increment failed', { userId, error: updateErr.message })
+    return { error: updateErr.message }
+  }
+
+  return { error: null }
+}
+
+async function refundCredit(db: AdminDb, userId: string): Promise<void> {
+  const { data: profile } = await db
+    .from('profiles')
+    .select('credits_used')
+    .eq('id', userId)
+    .single()
+
+  const credits = (profile as { credits_used: number } | null)?.credits_used ?? 0
+  if (credits <= 0) return
+
+  await db
+    .from('profiles')
+    .update({
+      credits_used: credits - 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+}
+
+// ── Analysis prompt ───────────────────────────────────────────────────────────
+
 function buildAnalysisPrompt(query: string): string {
-  return `Analyze the following competitive intelligence query and 
+  return `Analyze the following competitive intelligence query and
 respond with a detailed JSON report. Your goal is to identify systematic product weaknesses that represent genuine business opportunities by analyzing real user feedback.
 
 Follow this Research Protocol strictly:
@@ -69,13 +146,15 @@ Avoid generic ratings. Be specific (e.g., "can't bulk-edit tasks on mobile" vs "
 CRITICAL: In the "sources" array, include ALL URLs you referenced or found during your research. Each source must have a descriptive "title" and a valid full "uri". Include at least 5-10 sources. Make the analysis deep, specific, and actionable. Use real market knowledge. Be honest about weaknesses.`
 }
 
+// ── Claude streaming ──────────────────────────────────────────────────────────
+
 async function streamWithFallback(
   prompt: string,
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
 ): Promise<string> {
   const models = [
-    'claude-haiku-4-5-20251001',  // Primary
+    'claude-haiku-4-5-20251001',
   ]
 
   let lastError: unknown
@@ -89,9 +168,9 @@ async function streamWithFallback(
       const anthropicStream = await anthropic.messages.stream({
         model,
         max_tokens: 4096,
-        system: `You are an expert competitive intelligence analyst. 
-Your job is to analyze competitors and market positioning with deep, 
-actionable insights. Always respond with valid JSON only — no markdown, 
+        system: `You are an expert competitive intelligence analyst.
+Your job is to analyze competitors and market positioning with deep,
+actionable insights. Always respond with valid JSON only — no markdown,
 no code blocks, no preamble. Your entire response must be parseable JSON.`,
         messages: [{ role: 'user', content: prompt }],
       })
@@ -117,16 +196,12 @@ no code blocks, no preamble. Your entire response must be parseable JSON.`,
     } catch (err: unknown) {
       const error = err as { status?: number }
       lastError = err
-      logger.warn('[analyze] Model failed, trying next', { 
-        model, 
-        status: error?.status 
-      })
-      
-      // Only retry on overload/rate limit — not on auth errors
+      logger.warn('[analyze] Model failed, trying next', { model, status: error?.status })
+
       if (error?.status === 401 || error?.status === 400 || error?.status === 403) {
-        throw err // Don't retry on these errors
+        throw err
       }
-      
+
       continue
     }
   }
@@ -134,10 +209,12 @@ no code blocks, no preamble. Your entire response must be parseable JSON.`,
   throw lastError
 }
 
+// ── Route handler ─────────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   const timer = new PerformanceTimer('api/analyze')
   try {
-    // ── Fix #1: Authentication ─────────────────────────────────────
+    // Authentication
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -159,11 +236,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // ── Fix #3: Rate Limiting ──────────────────────────────────────
+    // Rate limiting
     const rateLimitResponse = await applyRateLimit(analyzeLimiter, user.id, req)
     if (rateLimitResponse) return rateLimitResponse
 
-    // ── Parse & validate request body ──────────────────────────────
+    // Parse & validate body
     const { query } = await req.json()
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -172,7 +249,6 @@ export async function POST(req: NextRequest) {
 
     const trimmedQuery = query.trim()
 
-    // ── Fix #5 (Audit 2): Maximum query length ────────────────────
     const MAX_QUERY_LENGTH = 500
     if (trimmedQuery.length > MAX_QUERY_LENGTH) {
       return NextResponse.json(
@@ -181,7 +257,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Fix #5 (Audit 2): Character validation ────────────────────
     const ALLOWED_QUERY_PATTERN = /^[a-zA-Z0-9\s\-_.,!?'"()&@#%+\/:\\]+$/
     if (!ALLOWED_QUERY_PATTERN.test(trimmedQuery)) {
       return NextResponse.json(
@@ -195,13 +270,13 @@ export async function POST(req: NextRequest) {
       queryLength: trimmedQuery.length
     })
 
-    // ── Fix #1: Service role client for DB operations ──────────────
+    // Service role client for all DB writes
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // ── Fix #6: In-flight request lock ─────────────────────────────
+    // In-flight request lock (prevents duplicate concurrent requests)
     let lockAcquired = false
     const lockKey = `analyze:lock:${user.id}`
     try {
@@ -209,11 +284,10 @@ export async function POST(req: NextRequest) {
       const result = await r.set(lockKey, '1', { nx: true, ex: 60 })
       lockAcquired = result === 'OK'
     } catch (lockErr) {
-      // If Redis is down, allow the request through (lock is secondary protection)
       logger.warn('[analyze] Lock acquisition failed — proceeding without lock', {
         error: (lockErr as Error).message,
       })
-      lockAcquired = true // treat as acquired to proceed
+      lockAcquired = true
     }
 
     if (!lockAcquired) {
@@ -224,24 +298,22 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+      // ── Cached result path ─────────────────────────────────────────
       const cached = await getCachedAnalysis(trimmedQuery, user.id)
       if (cached) {
         logger.info('[analyze] Cache HIT', { userId: user.id })
-        
+
         const encoder = new TextEncoder()
         const stream = new ReadableStream({
           async start(controller) {
             try {
-              // Reserve credit BEFORE returning cached
-              const { error: reserveError } = await supabaseAdmin.rpc('reserve_analysis_credit', {
-                p_user_id: user.id,
-              })
-              
-              if (reserveError) {
-                if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
+              const { error: reserveErr } = await reserveCredit(supabaseAdmin, user.id)
+
+              if (reserveErr) {
+                if (reserveErr === 'NO_CREDITS_REMAINING') {
                   controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' }) + "\n\n"))
                 } else {
-                  controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Unable to verify account status.' }) + "\n\n"))
+                  controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: reserveErr }) + "\n\n"))
                 }
                 return
               }
@@ -254,15 +326,15 @@ export async function POST(req: NextRequest) {
                   report: cached,
                   created_at: new Date().toISOString(),
                 })
-              
+
               if (saveError) {
-                await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
+                await refundCredit(supabaseAdmin, user.id)
                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis.' }) + "\n\n"))
               } else {
                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ done: true, report: cached }) + "\n\n"))
               }
             } catch (err) {
-              await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
+              await refundCredit(supabaseAdmin, user.id)
               controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis.' }) + "\n\n"))
             } finally {
               timer.stop({ cached: true })
@@ -271,7 +343,7 @@ export async function POST(req: NextRequest) {
             }
           }
         })
-        
+
         return new Response(stream, {
           headers: {
             'Content-Type': 'text/event-stream',
@@ -283,56 +355,54 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      const apiKey = process.env.ANTHROPIC_API_KEY
-      if (!apiKey) throw new Error('Server configuration error')
+      if (!process.env.ANTHROPIC_API_KEY) throw new Error('Server configuration error')
 
+      // ── Fresh analysis path ────────────────────────────────────────
       const encoder = new TextEncoder()
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            // STEP 1: Reserve credit BEFORE API call
-            const { error: reserveError } = await supabaseAdmin.rpc('reserve_analysis_credit', {
-              p_user_id: user.id,
-            })
+            // Reserve credit BEFORE making the API call
+            const { error: reserveErr } = await reserveCredit(supabaseAdmin, user.id)
 
-            if (reserveError) {
-              if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
+            if (reserveErr) {
+              if (reserveErr === 'NO_CREDITS_REMAINING') {
                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' }) + "\n\n"))
               } else {
-                controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Unable to verify account status.' }) + "\n\n"))
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: reserveErr }) + "\n\n"))
               }
               return
             }
 
             const prompt = buildAnalysisPrompt(trimmedQuery)
-            
             const fullText = await streamWithFallback(prompt, controller, encoder)
-            
-            // Parse the complete response
+
+            // Parse the response
             let parsedReport: AnalysisReport
             try {
-              // Clean any potential markdown wrapping
               let cleanedText = fullText.trim()
               cleanedText = cleanedText.replace(/^```json\n?/, '').replace(/^```\n?/, '')
-              cleanedText = cleanedText.replace(/\n?```\n?$/, '')
-              
-              cleanedText = cleanedText.trim()
-              
+              cleanedText = cleanedText.replace(/\n?```\n?$/, '').trim()
+
               const json = JSON.parse(cleanedText)
-              // Ensure we adhere to the specific response structure
               parsedReport = {
                 executiveSummary: json.executiveSummary || '',
                 weaknessMatrix: (json.weaknessMatrix || []).map((w: Record<string, unknown>) => ({
-                  ...w, quotes: (w.quotes as string[]) || [], competitorsAffected: (w.competitorsAffected as unknown[]) || []
+                  ...w,
+                  quotes: (w.quotes as string[]) || [],
+                  competitorsAffected: (w.competitorsAffected as unknown[]) || []
                 })),
                 comparisonTable: json.comparisonTable || [],
-                strategicRecommendations: json.strategicRecommendations || { strongestOpportunity: '', quickWinAlternative: '', redFlags: '' },
+                strategicRecommendations: json.strategicRecommendations || {
+                  strongestOpportunity: '',
+                  quickWinAlternative: '',
+                  redFlags: ''
+                },
                 validationNextSteps: json.validationNextSteps || [],
                 sources: json.sources || []
               } as AnalysisReport
             } catch (parseErr) {
               Sentry.captureException(parseErr)
-              // If JSON parsing fails, create a structured response from the raw text
               parsedReport = {
                 executiveSummary: fullText,
                 weaknessMatrix: [],
@@ -344,45 +414,42 @@ export async function POST(req: NextRequest) {
             }
 
             try {
-               const { error: saveError } = await supabaseAdmin
-                 .from('analysis_history')
-                 .insert({
-                   user_id: user.id,
-                   query: trimmedQuery,
-                   report: parsedReport,
-                   created_at: new Date().toISOString(),
-                 })
-               
-               if (saveError) {
-                 await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
-                 logger.error('[analyze] Failed to save', { error: saveError })
-                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis results.' }) + "\n\n"))
-               } else {
-                 await setCachedAnalysis(trimmedQuery, user.id, parsedReport)
-                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ done: true, report: parsedReport }) + "\n\n"))
-               }
+              const { error: saveError } = await supabaseAdmin
+                .from('analysis_history')
+                .insert({
+                  user_id: user.id,
+                  query: trimmedQuery,
+                  report: parsedReport,
+                  created_at: new Date().toISOString(),
+                })
+
+              if (saveError) {
+                await refundCredit(supabaseAdmin, user.id)
+                logger.error('[analyze] Failed to save', { error: saveError })
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis results.' }) + "\n\n"))
+              } else {
+                await setCachedAnalysis(trimmedQuery, user.id, parsedReport)
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ done: true, report: parsedReport }) + "\n\n"))
+              }
             } catch (saveErr) {
-               await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
-               logger.error('[analyze] Failed to save', { error: saveErr })
-               controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis results.' }) + "\n\n"))
+              await refundCredit(supabaseAdmin, user.id)
+              logger.error('[analyze] Failed to save', { error: saveErr })
+              controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis results.' }) + "\n\n"))
             }
+
           } catch (err: unknown) {
-            try {
-              await supabaseAdmin.rpc('refund_analysis_credit', {
-                p_user_id: user.id,
-              })
-            } catch (e) {}
+            await refundCredit(supabaseAdmin, user.id)
 
             const error = err as { status?: number; message?: string }
+
             if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('quota')) {
               Sentry.captureMessage('Claude API rate limit hit', {
                 level: 'warning',
                 tags: { source: 'claude_stream' }
               })
-              
               controller.enqueue(
                 encoder.encode(
-                  "data: " + JSON.stringify({ 
+                  "data: " + JSON.stringify({
                     error: 'High demand — please try again in 60 seconds.',
                     retryAfter: 60
                   }) + "\n\n"
@@ -415,25 +482,14 @@ export async function POST(req: NextRequest) {
             } else {
               const errObj = err instanceof Error ? err : new Error(String(err))
               Sentry.captureException(errObj, {
-                tags: { 
-                  source: 'claude_stream',
-                  userId: user.id,
-                },
-                extra: {
-                  query: trimmedQuery,
-                  errorMessage: errObj.message,
-                }
+                tags: { source: 'claude_stream', userId: user.id },
+                extra: { query: trimmedQuery, errorMessage: errObj.message }
               })
-              
-              logger.error('[analyze] Stream error', { 
-                error: errObj.message,
-                userId: user.id 
-              })
-              
+              logger.error('[analyze] Stream error', { error: errObj.message, userId: user.id })
               controller.enqueue(
                 encoder.encode(
-                  "data: " + JSON.stringify({ 
-                    error: 'Analysis failed. Please try again.' 
+                  "data: " + JSON.stringify({
+                    error: 'Analysis failed. Please try again.'
                   }) + "\n\n"
                 )
               )
@@ -445,7 +501,7 @@ export async function POST(req: NextRequest) {
           }
         }
       })
-      
+
       return new Response(stream, {
         headers: {
           'Content-Type': 'text/event-stream',
@@ -454,7 +510,7 @@ export async function POST(req: NextRequest) {
           'X-Accel-Buffering': 'no',
         },
       })
-      
+
     } catch (err) {
       await redis().del(lockKey).catch(() => {})
       throw err
