@@ -309,7 +309,7 @@ export const AnalysisPage: React.FC = () => {
       msg.includes('quota') ||
       msg.includes('RESOURCE_EXHAUSTED')
     ) {
-      return 'Gemini API limit reached. Please wait a minute before retrying, or upgrade to a paid Gemini plan for higher limits.'
+      return 'API limit reached. Please wait a minute before retrying.'
     }
     return 'Analysis failed. Please try again.'
   }

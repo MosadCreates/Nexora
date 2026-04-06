@@ -26,7 +26,7 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
-      GEMINI_API_KEY: placeholder
+      ANTHROPIC_API_KEY: placeholder
       POLAR_ORGANIZATION_TOKEN: placeholder
       SENTRY_DSN: ""
       NEXT_PUBLIC_POLAR_STARTER_MONTHLY_ID: placeholder
