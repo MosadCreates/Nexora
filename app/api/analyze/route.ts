@@ -9,7 +9,7 @@ import { MAX_CREDITS } from '@/lib/planUtils'
 import { PerformanceTimer } from '@/lib/monitoring'
 import { AnalysisReport } from '@/types'
 
-export const maxDuration = 60
+export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
 // Module-level singleton — instantiated once, not per request
@@ -162,10 +162,11 @@ async function streamWithFallback(
       // Prefill assistant turn with '{' to guarantee JSON-first output (no preamble)
       const anthropicStream = await anthropic.messages.stream({
         model,
-        max_tokens: 8000,
+        max_tokens: 4000,
         system: `You are an expert competitive intelligence analyst.
 Respond ONLY with valid JSON. No markdown, no code fences, no explanation text.
-Your entire response must start with '{' and be parseable as JSON.`,
+Your entire response must start with '{' and be parseable as JSON.
+Be concise — keep each text field under 3 sentences. Include 3-5 items in each array.`,
         messages: [
           { role: 'user', content: prompt },
           { role: 'assistant', content: '{' },

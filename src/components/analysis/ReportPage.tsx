@@ -56,7 +56,7 @@ const DOWNLOAD_FORMATS = [
     label: 'PDF',
     icon: FileDown,
     description: 'Professional report',
-    minPlan: 'professional' as SubscriptionPlan,
+    minPlan: 'hobby' as SubscriptionPlan,
     color: 'text-blue-500'
   }
 ]
@@ -186,9 +186,9 @@ export const ReportPage: React.FC = () => {
 
         if (formatId === 'pdf') {
           const { pdf } = await import('@react-pdf/renderer')
-          const { default: AnalysisPDF } = await import('./AnalysisPDF')
-          
-          const blob = await pdf(<AnalysisPDF report={report} query={query} />).toBlob()
+          const { default: AnalysisPDFCore } = await import('./AnalysisPDFCore')
+
+          const blob = await pdf(<AnalysisPDFCore report={report} query={query} />).toBlob()
           triggerDownload(blob, `report-${id}.pdf`)
         }
       } catch (err) {
