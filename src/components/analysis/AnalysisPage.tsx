@@ -2,11 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { AnalysisStep, AnalysisReport } from '@/types'
 import * as Sentry from '@sentry/nextjs'
-import { analyzeWeakness } from '@/services/geminiService'
 import LoadingState from '@/components/analysis/LoadingState'
 import { LoadingIntelligence } from '@/components/analysis/LoadingIntelligence'
 import { LoaderTwo } from '@/components/ui/loader'
@@ -21,60 +19,6 @@ import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { AnalyzePanel } from '@/components/dashboard/AnalyzePanel'
 import { RecentAnalyses } from '@/components/dashboard/RecentAnalyses'
 import { getPlanConfig } from '@/lib/planFeatures'
-
-declare global {
-  interface Window {
-    puter: any;
-  }
-}
-
-const SYSTEM_INSTRUCTION = `
-You are an expert competitive intelligence analyst. Your goal is to identify systematic product weaknesses that represent genuine business opportunities by analyzing real user feedback.
-
-Follow this Research Protocol strictly:
-1. Use Google Search to find high-signal sources: Reddit, G2, Capterra, Trustpilot, App Store, ProductHunt, Hacker News.
-2. Extract specific complaints, frequency indicators, intensity signals ("dealbreaker", "switching"), and workaround mentions.
-3. Group similar complaints into weakness patterns.
-4. Assess Frequency, Pain Intensity, Monetization Potential, and Competitive Moat.
-
-IMPORTANT: You MUST return the analysis ONLY as valid JSON (no markdown, no explanation text) in this exact format:
-{
-  "executiveSummary": "string",
-  "weaknessMatrix": [
-    {
-      "name": "string",
-      "frequency": "High|Medium|Low",
-      "frequencyPercentage": "string",
-      "painIntensity": "Severe|Moderate|Mild",
-      "opportunityScore": number (1-5),
-      "quotes": ["string"],
-      "significance": "string",
-      "competitorsAffected": [{"name": "string", "failureMode": "string"}],
-      "monetizationSignals": "string"
-    }
-  ],
-  "comparisonTable": [
-    {
-      "weakness": "string",
-      "frequency": "string",
-      "pain": "string",
-      "moat": "string",
-      "opportunityScore": number,
-      "whyBuildThis": "string"
-    }
-  ],
-  "strategicRecommendations": {
-    "strongestOpportunity": "string",
-    "quickWinAlternative": "string",
-    "redFlags": "string"
-  },
-  "validationNextSteps": ["string"],
-  "sources": [{"title": "string (name of the source)", "uri": "string (full URL)"}]
-}
-
-Avoid generic ratings. Be specific (e.g., "can't bulk-edit tasks on mobile" vs "poor UX"). Focus on paying users.
-CRITICAL: In the "sources" array, include ALL URLs you referenced or found during your research. Each source must have a descriptive "title" and a valid full "uri". Include at least 5-10 sources.
-`;
 
 export const AnalysisPage: React.FC = () => {
   const { session, profile, loading: authLoading, fetchProfile } = useAuth()
@@ -249,11 +193,7 @@ export const AnalysisPage: React.FC = () => {
 
   const handleAnalyze = async (queryText: string) => {
     if (!queryText.trim() || isOutOfCredits) return
-    if (
-      step !== AnalysisStep.IDLE && 
-      step !== AnalysisStep.ERROR && 
-      queryText === query
-    ) return
+    if (step !== AnalysisStep.IDLE && queryText === query) return
 
     setQuery(queryText)
     setStep(AnalysisStep.RESEARCHING)
@@ -267,67 +207,86 @@ export const AnalysisPage: React.FC = () => {
         throw new Error('Authentication required')
       }
 
-      // ── Use Puter.js for generation ──
-      if (typeof window.puter === 'undefined') {
-        throw new Error('Analysis engine failed to load. Please refresh the page.')
-      }
-
-      const prompt = `System: ${SYSTEM_INSTRUCTION}\n\nUser: Please analyze the following query for competitive weaknesses and opportunities: "${queryText}"\n\nRemember: Respond with ONLY valid JSON.`
-      
-      const flashResponse = await window.puter.ai.chat(
-        prompt,
-        {
-          model: 'gemini-3.1-pro-preview',
-          stream: true
-        }
-      );
-
-      let fullText = ''
-      for await (const part of flashResponse) {
-        if (part?.text) {
-          fullText += part.text
-          setStreamedText(prev => prev + part.text)
-        }
-      }
-
-      // ── Parse and Save ──
-      let rawText = fullText.trim()
-      if (rawText.startsWith('```json')) rawText = rawText.substring(7)
-      else if (rawText.startsWith('```')) rawText = rawText.substring(3)
-      if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3)
-      rawText = rawText.trim()
-
-      let finalReportData;
-      try {
-        finalReportData = JSON.parse(rawText)
-      } catch (e) {
-        throw new Error('Failed to parse analysis results. Please retry.')
-      }
-
-      // Save to our backend
-      const saveResponse = await fetch('/api/save-analysis', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
-        body: JSON.stringify({ query: queryText, report: finalReportData }),
+        body: JSON.stringify({ query: queryText }),
       })
-
-      if (!saveResponse.ok) {
-        const data = await saveResponse.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to save analysis')
+      
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Analysis failed')
       }
 
-      const { id: analysisId } = await saveResponse.json()
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
       
+      if (!reader) throw new Error('No response stream')
+      
+      let buffer = ''
+      let finalReportData: any = null
+      
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+        
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          
+          try {
+            const data = JSON.parse(line.slice(6))
+            
+            if (data.chunk) {
+              setStreamedText(prev => prev + data.chunk)
+            }
+            
+            if (data.error) {
+              throw new Error(data.error)
+            }
+            
+            if (data.done && data.report) {
+              finalReportData = data.report
+              setReport(data.report)
+            }
+          } catch (parseErr) {
+            // skip malformed
+          }
+        }
+      }
+
       if (session) {
         fetchProfile(session)
       }
 
-      setReport(finalReportData)
-      setStep(AnalysisStep.COMPLETED)
-      router.push(analysisId ? `/report/${analysisId}` : '/report')
+      if (finalReportData) {
+        // Fetch latest analysis to get the ID for redirect
+        let analysisId: string | null = null
+        if (session?.user?.id) {
+          const { data } = await supabase
+            .from('analysis_history')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (data) {
+            analysisId = data.id
+          }
+        }
+        
+        setStep(AnalysisStep.COMPLETED)
+        router.push(analysisId ? `/report/${analysisId}` : '/report')
+      } else {
+        throw new Error('Analysis completed but no report was returned.')
+      }
       
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err))
@@ -508,86 +467,43 @@ export const AnalysisPage: React.FC = () => {
           )}
 
           {step === AnalysisStep.ERROR && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className='max-w-xl mx-auto py-20 text-center'
-            >
-              <div className='relative group'>
-                {/* Animated gradient glow */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-red-500/20 rounded-[2.5rem] blur-2xl opacity-50 group-hover:opacity-75 transition duration-1000 animate-pulse" />
-                
-                <Card className='relative border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-black/70 backdrop-blur-3xl overflow-hidden rounded-[2rem] shadow-2xl'>
-                  <CardContent className='pt-16 pb-12 px-8'>
-                    <div className='relative mb-10'>
-                      <div className='w-24 h-24 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto border border-red-500/20 rotate-3'>
-                        <svg
-                          className='w-12 h-12 text-red-500 -rotate-3'
-                          fill='none'
-                          viewBox='0 0 24 24'
-                          stroke='currentColor'
-                        >
-                          <path
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            strokeWidth={1.5}
-                            d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
-                          />
-                        </svg>
-                      </div>
-                      {/* Decorative elements */}
-                      <div className="absolute top-0 right-1/4 w-3 h-3 bg-red-400/20 rounded-full blur-sm animate-ping" />
-                    </div>
-                    
-                    <h3 className='text-3xl font-bold mb-4 text-neutral-900 dark:text-white tracking-tight'>
-                      Analysis Interrupted
-                    </h3>
-                    
-                    <div className='space-y-2 mb-12'>
-                      <p className='text-neutral-600 dark:text-neutral-400 text-base leading-relaxed max-w-sm mx-auto font-medium'>
-                        {error}
-                      </p>
-                      <p className='text-neutral-400 dark:text-neutral-500 text-xs uppercase tracking-widest'>
-                        Error ID: Nex-Err-{Math.floor(Math.random() * 10000)}
-                      </p>
-                    </div>
-
-                    <div className='flex flex-col items-center gap-6'>
-                      {retryCountdown > 0 ? (
-                        <div className='px-8 py-4 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500 text-sm font-semibold border border-neutral-200 dark:border-neutral-700 shadow-inner'>
-                          Retry possible in <span className="text-red-500 tabular-nums">{retryCountdown}s</span>
-                        </div>
-                      ) : (
-                        <ShadButton
-                          onClick={() => handleAnalyze(query)}
-                          className='group relative bg-red-600 hover:bg-red-700 text-white px-10 py-7 rounded-2xl text-lg font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-red-500/25 w-full sm:w-auto h-auto'
-                        >
-                          <span className="relative z-10 flex items-center gap-2">
-                             Retry Analysis
-                             <svg className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                             </svg>
-                          </span>
-                        </ShadButton>
-                      )}
-                      
-                      <button 
-                        onClick={() => {
-                          setStep(AnalysisStep.IDLE)
-                          setQuery('')
-                        }}
-                        className='text-sm font-medium text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors duration-300 flex items-center gap-2 group'
-                      >
-                        <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        Back to dashboard
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </motion.div>
+            <div className='max-w-xl mx-auto py-20 text-center'>
+              <Card className='border-red-200 bg-red-50/50'>
+                <CardContent className='pt-6'>
+                  <div className='w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4'>
+                    <svg
+                      className='w-8 h-8 text-red-600'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      stroke='currentColor'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                      />
+                    </svg>
+                  </div>
+                  <h3 className='text-xl font-bold mb-2 text-red-900'>
+                    Analysis Interrupted
+                  </h3>
+                  <p className='text-red-700 mb-6'>{error}</p>
+                  {retryCountdown > 0 ? (
+                    <ShadButton disabled variant='destructive'>
+                      Retry possible in {retryCountdown}s
+                    </ShadButton>
+                  ) : (
+                    <ShadButton
+                      onClick={() => handleAnalyze(query)}
+                      variant='destructive'
+                    >
+                      Retry Analysis
+                    </ShadButton>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {step === AnalysisStep.COMPLETED && (
