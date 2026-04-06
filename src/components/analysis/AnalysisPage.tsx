@@ -311,7 +311,11 @@ export const AnalysisPage: React.FC = () => {
     ) {
       return 'API limit reached. Please wait a minute before retrying.'
     }
-    return 'Analysis failed. Please try again.'
+    // Only return generic if it's completely opaque
+    if (msg.includes('fetch failed') || msg === '{}') {
+      return 'Analysis failed. Please try again.'
+    }
+    return msg
   }
 
   useEffect(() => {

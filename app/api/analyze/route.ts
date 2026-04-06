@@ -309,10 +309,9 @@ export async function POST(req: NextRequest) {
             let parsedReport: AnalysisReport
             try {
               // Clean any potential markdown wrapping
-              let cleanedText = fullText
-              if (cleanedText.startsWith('```json')) cleanedText = cleanedText.substring(7)
-              else if (cleanedText.startsWith('```')) cleanedText = cleanedText.substring(3)
-              if (cleanedText.endsWith('```')) cleanedText = cleanedText.substring(0, cleanedText.length - 3)
+              let cleanedText = fullText.trim()
+              cleanedText = cleanedText.replace(/^```json\n?/, '').replace(/^```\n?/, '')
+              cleanedText = cleanedText.replace(/\n?```\n?$/, '')
               
               cleanedText = cleanedText.trim()
               
