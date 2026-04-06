@@ -1,3 +1,4 @@
+import React from 'react'
 import { AnalysisReport, SubscriptionPlan } from '../../types'
 import {
   CheckCircle,
