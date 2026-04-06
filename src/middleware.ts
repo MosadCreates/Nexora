@@ -30,19 +30,16 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Cross-Origin-Resource-Policy': 'same-origin',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   'Content-Security-Policy': [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://js.puter.com https://puter.com",
-    "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://js.puter.com https://puter.com",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com https://www.every-ai.com https://assets.aceternity.com https://github.com https://avatars.githubusercontent.com https://api.iconify.design https://assets.puter.site https://*.puter.site",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://o4509996976242688.ingest.de.sentry.io https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://api.iconify.design https://formsubmit.co https://puter.com https://*.puter.com https://*.puter.site",
-    "font-src 'self'",
-    "frame-src 'self' https://challenges.cloudflare.com https://puter.com https://*.puter.com https://*.puter.site",
-    "worker-src 'self' blob: https://puter.com https://*.puter.com https://*.puter.site",
-    "child-src 'self' https://puter.com https://*.puter.com https://*.puter.site",
-  ].join('; '),
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com",
+  "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://images.unsplash.com https://www.every-ai.com https://assets.aceternity.com https://github.com https://avatars.githubusercontent.com https://api.iconify.design",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://o4509996976242688.ingest.de.sentry.io https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://api.iconify.design",
+  "font-src 'self'",
+  "frame-src https://challenges.cloudflare.com",
+].join('; '),
 }
-
 
 export async function middleware(request: NextRequest) {
   // Create a response that we'll modify
@@ -157,6 +154,6 @@ export async function middleware(request: NextRequest) {
 // ── Matcher: exclude static files and images ────────────────────────
 export const config = {
   matcher: [
-    '/((?!api/webhooks|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
