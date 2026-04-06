@@ -229,6 +229,33 @@ export const AnalysisPage: React.FC = () => {
       
       let buffer = ''
       let finalReportData: any = null
+      let streamError: string | null = null
+      
+      const processSSELine = (line: string) => {
+        if (!line.startsWith('data: ')) return
+        
+        let data: any
+        try {
+          data = JSON.parse(line.slice(6))
+        } catch {
+          // Skip malformed JSON only
+          return
+        }
+        
+        if (data.chunk) {
+          setStreamedText(prev => prev + data.chunk)
+        }
+        
+        if (data.error) {
+          // Capture the actual API error message
+          streamError = data.error
+        }
+        
+        if (data.done && data.report) {
+          finalReportData = data.report
+          setReport(data.report)
+        }
+      }
       
       while (true) {
         const { done, value } = await reader.read()
@@ -239,27 +266,21 @@ export const AnalysisPage: React.FC = () => {
         buffer = lines.pop() || ''
         
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          
-          try {
-            const data = JSON.parse(line.slice(6))
-            
-            if (data.chunk) {
-              setStreamedText(prev => prev + data.chunk)
-            }
-            
-            if (data.error) {
-              throw new Error(data.error)
-            }
-            
-            if (data.done && data.report) {
-              finalReportData = data.report
-              setReport(data.report)
-            }
-          } catch (parseErr) {
-            // skip malformed
-          }
+          processSSELine(line)
         }
+        
+        // Stop reading if we got an error from the API
+        if (streamError) break
+      }
+      
+      // Process any remaining data left in the buffer
+      if (buffer.trim()) {
+        processSSELine(buffer.trim())
+      }
+      
+      // If the API sent an error event, throw it with the real message
+      if (streamError) {
+        throw new Error(streamError)
       }
 
       if (session) {
