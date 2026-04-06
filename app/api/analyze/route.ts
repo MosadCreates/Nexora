@@ -371,12 +371,16 @@ export async function POST(req: NextRequest) {
             const prompt = buildAnalysisPrompt(trimmedQuery)
             const fullText = await streamWithFallback(prompt, controller, encoder)
 
-            // Parse the response
+            // Parse the response — robust extraction handles text before/after JSON
             let parsedReport: AnalysisReport
             try {
               let cleanedText = fullText.trim()
-              cleanedText = cleanedText.replace(/^```json\n?/, '').replace(/^```\n?/, '')
-              cleanedText = cleanedText.replace(/\n?```\n?$/, '').trim()
+              // Strip markdown code fences if present
+              cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '')
+              cleanedText = cleanedText.replace(/\s*```\s*$/i, '').trim()
+              // Extract the outermost JSON object even if Claude adds prose around it
+              const jsonMatch = cleanedText.match(/\{[\s\S]*\}/)
+              if (jsonMatch) cleanedText = jsonMatch[0]
 
               const json = JSON.parse(cleanedText)
               parsedReport = {
@@ -393,12 +397,15 @@ export async function POST(req: NextRequest) {
                   redFlags: ''
                 },
                 validationNextSteps: json.validationNextSteps || [],
-                sources: json.sources || []
+                sources: (json.sources || []).filter(
+                  (s: unknown) => s && typeof s === 'object' && (s as Record<string, unknown>).uri
+                )
               } as AnalysisReport
             } catch (parseErr) {
               Sentry.captureException(parseErr)
+              logger.error('[analyze] JSON parse failed', { error: (parseErr as Error).message, preview: fullText.slice(0, 200) })
               parsedReport = {
-                executiveSummary: fullText,
+                executiveSummary: 'Analysis completed but the response could not be parsed. Please try again.',
                 weaknessMatrix: [],
                 comparisonTable: [],
                 strategicRecommendations: { strongestOpportunity: '', quickWinAlternative: '', redFlags: '' },
