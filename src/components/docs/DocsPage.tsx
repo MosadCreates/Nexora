@@ -71,7 +71,7 @@ const IntroductionDocs = () => (
         System Intelligence Guide
       </h1>
       <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-        Nexora is a high-performance, Gemini-integrated platform designed for deep competitive intelligence. We move beyond simple "keyword tracking" into multidimensional market synthesis.
+        Nexora is a high-performance, Claude-integrated platform designed for deep competitive intelligence. We move beyond simple "keyword tracking" into multidimensional market synthesis.
       </p>
     </header>
 
@@ -130,7 +130,7 @@ const AnalysisEngineDocs = () => (
         Analysis Engine
       </h1>
       <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-        Our Gemini-powered analysis pipeline is designed for hyper-accuracy. Unlike traditional tools, we analyze the semantic structure of the entire competitor ecosystem.
+        Our Claude-powered analysis pipeline is designed for hyper-accuracy. Unlike traditional tools, we analyze the semantic structure of the entire competitor ecosystem.
       </p>
     </header>
 
@@ -166,7 +166,7 @@ const AnalysisEngineDocs = () => (
         <Layers className="w-5 h-5 text-blue-500" /> Technical Accuracy
       </h2>
       <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
-        We maintain a 99.8% semantic accuracy rate by cross-verifying agent findings against three independent Gemini nodes before final synthesis.
+        We maintain a 99.8% semantic accuracy rate by cross-verifying agent findings against three independent Claude nodes before final synthesis.
       </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -384,7 +384,7 @@ const DeploymentDocs = () => (
     <div className="p-8 bg-neutral-900 rounded-3xl space-y-4">
       <pre className="text-xs text-blue-400">
 {`docker run -e NEXORA_KEY=... \\
-  -e GEMINI_STRICT_MODE=true \\
+  -e CLAUDE_STRICT_MODE=true \\
   nexora-cloud/intelligence-node:latest`}
       </pre>
       <p className="text-sm text-neutral-400 font-sans leading-relaxed">

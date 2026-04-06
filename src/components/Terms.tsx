@@ -232,7 +232,7 @@ const termsContent = [
     description: (
       <div className="p-6 rounded-2xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
         <p className="font-bold text-black dark:text-white mb-2">Zero AI Training</p>
-        <p className="text-sm">Your queries and reports are NEVER used to train or fine-tune AI models, including Google Gemini.</p>
+        <p className="text-sm">Your queries and reports are NEVER used to train or fine-tune AI models, including Anthropic Claude.</p>
       </div>
     ),
   },
