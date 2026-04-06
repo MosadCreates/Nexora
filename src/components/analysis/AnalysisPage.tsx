@@ -19,6 +19,7 @@ import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { AnalyzePanel } from '@/components/dashboard/AnalyzePanel'
 import { RecentAnalyses } from '@/components/dashboard/RecentAnalyses'
 import { getPlanConfig } from '@/lib/planFeatures'
+import { AlertCircle, Search, RefreshCw, X } from 'lucide-react'
 
 export const AnalysisPage: React.FC = () => {
   const { session, profile, loading: authLoading, fetchProfile } = useAuth()
@@ -193,7 +194,7 @@ export const AnalysisPage: React.FC = () => {
 
   const handleAnalyze = async (queryText: string) => {
     if (!queryText.trim() || isOutOfCredits) return
-    if (step !== AnalysisStep.IDLE && queryText === query) return
+    if (step !== AnalysisStep.IDLE && step !== AnalysisStep.ERROR && queryText === query) return
 
     setQuery(queryText)
     setStep(AnalysisStep.RESEARCHING)
@@ -467,42 +468,65 @@ export const AnalysisPage: React.FC = () => {
           )}
 
           {step === AnalysisStep.ERROR && (
-            <div className='max-w-xl mx-auto py-20 text-center'>
-              <Card className='border-red-200 bg-red-50/50'>
-                <CardContent className='pt-6'>
-                  <div className='w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-                    <svg
-                      className='w-8 h-8 text-red-600'
-                      fill='none'
-                      viewBox='0 0 24 24'
-                      stroke='currentColor'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-                      />
-                    </svg>
+            <div className='max-w-2xl mx-auto py-20 px-4'>
+              <div className='relative group'>
+                {/* Glow Effect */}
+                <div className='absolute -inset-1 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200' />
+                
+                <div className='relative bg-white dark:bg-neutral-900 border border-red-100 dark:border-red-900/30 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden'>
+                  <div className='absolute top-0 right-0 p-8 opacity-5'>
+                    <AlertCircle size={140} className='text-red-500' />
                   </div>
-                  <h3 className='text-xl font-bold mb-2 text-red-900'>
-                    Analysis Interrupted
-                  </h3>
-                  <p className='text-red-700 mb-6'>{error}</p>
-                  {retryCountdown > 0 ? (
-                    <ShadButton disabled variant='destructive'>
-                      Retry possible in {retryCountdown}s
-                    </ShadButton>
-                  ) : (
-                    <ShadButton
-                      onClick={() => handleAnalyze(query)}
-                      variant='destructive'
-                    >
-                      Retry Analysis
-                    </ShadButton>
-                  )}
-                </CardContent>
-              </Card>
+
+                  <div className='relative z-10 flex flex-col items-center text-center'>
+                    <div className='w-20 h-20 bg-red-50 dark:bg-red-950/30 rounded-2xl flex items-center justify-center mb-8 ring-1 ring-red-100 dark:ring-red-900/50'>
+                      <AlertCircle className='w-10 h-10 text-red-600 dark:text-red-400' />
+                    </div>
+
+                    <h3 className='text-3xl font-bold text-neutral-900 dark:text-white mb-4 tracking-tight'>
+                      Analysis Interrupted
+                    </h3>
+                    
+                    <p className='text-neutral-600 dark:text-neutral-400 mb-10 max-w-md leading-relaxed text-lg'>
+                      {error || "We encountered an unexpected issue while analyzing your request. Our intelligence engine might be experiencing high load."}
+                    </p>
+
+                    <div className='flex flex-col sm:flex-row gap-4 w-full justify-center'>
+                      {retryCountdown > 0 ? (
+                        <ShadButton disabled className='h-14 px-8 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500 border-none min-w-[200px]'>
+                          <RefreshCw className='w-4 h-4 mr-2 animate-spin' />
+                          Retry in {retryCountdown}s
+                        </ShadButton>
+                      ) : (
+                        <ShadButton
+                          onClick={() => handleAnalyze(query)}
+                          className='h-14 px-8 rounded-2xl bg-red-600 hover:bg-red-700 text-white border-none shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] min-w-[200px] text-base font-semibold'
+                        >
+                          <RefreshCw className='w-4 h-4 mr-2' />
+                          Retry Analysis
+                        </ShadButton>
+                      )}
+                      
+                      <ShadButton
+                        onClick={() => {
+                          setStep(AnalysisStep.IDLE)
+                          setError(null)
+                          setQuery('')
+                        }}
+                        variant='outline'
+                        className='h-14 px-8 rounded-2xl border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all min-w-[200px] text-base font-medium'
+                      >
+                        <Search className='w-4 h-4 mr-2' />
+                        New Search
+                      </ShadButton>
+                    </div>
+
+                    <p className='mt-8 text-sm text-neutral-400 dark:text-neutral-500'>
+                      Need help? <a href='/contact' className='text-red-600 dark:text-red-400 hover:underline'>Contact Support</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
