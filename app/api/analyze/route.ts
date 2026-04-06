@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Anthropic from '@anthropic-ai/sdk'
 import * as Sentry from '@sentry/nextjs'
 import { logger } from '@/lib/logger'
 import { analyzeLimiter, applyRateLimit, redis } from '@/lib/rateLimit'
 import { getCachedAnalysis, setCachedAnalysis } from '@/lib/analysisCache'
 import { MAX_CREDITS } from '@/lib/planUtils'
 import { PerformanceTimer } from '@/lib/monitoring'
+import { AnalysisReport } from '@/types'
 
 // ── Fix #1 + #6: Module-level singleton — instantiated once, not per request ──
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+})
 
-const SYSTEM_INSTRUCTION = `
-You are an expert competitive intelligence analyst. Your goal is to identify systematic product weaknesses that represent genuine business opportunities by analyzing real user feedback.
+function buildAnalysisPrompt(query: string): string {
+  return `Analyze the following competitive intelligence query and 
+respond with a detailed JSON report. Your goal is to identify systematic product weaknesses that represent genuine business opportunities by analyzing real user feedback.
 
 Follow this Research Protocol strictly:
 1. Use Google Search to find high-signal sources: Reddit, G2, Capterra, Trustpilot, App Store, ProductHunt, Hacker News.
@@ -20,17 +24,20 @@ Follow this Research Protocol strictly:
 3. Group similar complaints into weakness patterns.
 4. Assess Frequency, Pain Intensity, Monetization Potential, and Competitive Moat.
 
-IMPORTANT: You MUST return the analysis ONLY as valid JSON (no markdown, no explanation text) in this exact format:
+Query: "${query}"
+
+Respond ONLY with this exact JSON structure — no other text, no markdown, no code blocks, no preamble. Your entire response must be parseable JSON:
+
 {
-  "executiveSummary": "string",
+  "executiveSummary": "2-3 paragraph executive summary of findings",
   "weaknessMatrix": [
     {
-      "name": "string",
+      "name": "string (name of weakness)",
       "frequency": "High|Medium|Low",
-      "frequencyPercentage": "string",
+      "frequencyPercentage": "string (e.g. 45%)",
       "painIntensity": "Severe|Moderate|Mild",
-      "opportunityScore": number (1-5),
-      "quotes": ["string"],
+      "opportunityScore": 4,
+      "quotes": ["string (real or representative quote)"],
       "significance": "string",
       "competitorsAffected": [{"name": "string", "failureMode": "string"}],
       "monetizationSignals": "string"
@@ -42,7 +49,7 @@ IMPORTANT: You MUST return the analysis ONLY as valid JSON (no markdown, no expl
       "frequency": "string",
       "pain": "string",
       "moat": "string",
-      "opportunityScore": number,
+      "opportunityScore": 4,
       "whyBuildThis": "string"
     }
   ],
@@ -56,8 +63,74 @@ IMPORTANT: You MUST return the analysis ONLY as valid JSON (no markdown, no expl
 }
 
 Avoid generic ratings. Be specific (e.g., "can't bulk-edit tasks on mobile" vs "poor UX"). Focus on paying users.
-CRITICAL: In the "sources" array, include ALL URLs you referenced or found during your research. Each source must have a descriptive "title" and a valid full "uri". Include at least 5-10 sources.
-`
+CRITICAL: In the "sources" array, include ALL URLs you referenced or found during your research. Each source must have a descriptive "title" and a valid full "uri". Include at least 5-10 sources. Make the analysis deep, specific, and actionable. Use real market knowledge. Be honest about weaknesses.`
+}
+
+async function streamWithFallback(
+  prompt: string,
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder
+): Promise<string> {
+  const models = [
+    'claude-haiku-4-5-20251014',  // Primary — cheapest
+    'claude-sonnet-4-5',           // Fallback — better quality
+  ]
+
+  let lastError: unknown
+  let fullText = ''
+
+  for (const model of models) {
+    try {
+      logger.info('[analyze] Trying model', { model })
+      fullText = ''
+
+      const anthropicStream = await anthropic.messages.stream({
+        model,
+        max_tokens: 4096,
+        system: `You are an expert competitive intelligence analyst. 
+Your job is to analyze competitors and market positioning with deep, 
+actionable insights. Always respond with valid JSON only — no markdown, 
+no code blocks, no preamble. Your entire response must be parseable JSON.`,
+        messages: [{ role: 'user', content: prompt }],
+      })
+
+      for await (const event of anthropicStream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          const chunkText = event.delta.text
+          fullText += chunkText
+          controller.enqueue(
+            encoder.encode(
+              "data: " + JSON.stringify({ chunk: chunkText }) + "\n\n"
+            )
+          )
+        }
+      }
+
+      logger.info('[analyze] Model succeeded', { model })
+      return fullText
+
+    } catch (err: unknown) {
+      const error = err as { status?: number }
+      lastError = err
+      logger.warn('[analyze] Model failed, trying next', { 
+        model, 
+        status: error?.status 
+      })
+      
+      // Only retry on overload/rate limit — not on auth errors
+      if (error?.status === 401 || error?.status === 400 || error?.status === 403) {
+        throw err // Don't retry on these errors
+      }
+      
+      continue
+    }
+  }
+
+  throw lastError
+}
 
 export async function POST(req: NextRequest) {
   const timer = new PerformanceTimer('api/analyze')
@@ -107,7 +180,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Fix #5 (Audit 2): Character validation ────────────────────
-    const ALLOWED_QUERY_PATTERN = /^[a-zA-Z0-9\s\-_.,!?'"()&@#%+\/:]+$/
+    const ALLOWED_QUERY_PATTERN = /^[a-zA-Z0-9\s\-_.,!?'"()&@#%+\/:\\]+$/
     if (!ALLOWED_QUERY_PATTERN.test(trimmedQuery)) {
       return NextResponse.json(
         { error: 'Query contains invalid characters' },
@@ -125,8 +198,6 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-
-    // ── Pre-check logic removed (moved to after lock via reservation) ──
 
     // ── Fix #6: In-flight request lock ─────────────────────────────
     let lockAcquired = false
@@ -166,9 +237,9 @@ export async function POST(req: NextRequest) {
               
               if (reserveError) {
                 if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' })}\n\n`))
+                  controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' }) + "\n\n"))
                 } else {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Unable to verify account status.' })}\n\n`))
+                  controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Unable to verify account status.' }) + "\n\n"))
                 }
                 return
               }
@@ -184,17 +255,17 @@ export async function POST(req: NextRequest) {
               
               if (saveError) {
                 await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis.' })}\n\n`))
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis.' }) + "\n\n"))
               } else {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, report: cached })}\n\n`))
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ done: true, report: cached }) + "\n\n"))
               }
             } catch (err) {
               await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis.' })}\n\n`))
+              controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis.' }) + "\n\n"))
             } finally {
               timer.stop({ cached: true })
               controller.close()
-              await redis().del(lockKey)
+              await redis().del(lockKey).catch(() => {})
             }
           }
         })
@@ -210,126 +281,141 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      const apiKey = process.env.GEMINI_API_KEY
+      const apiKey = process.env.ANTHROPIC_API_KEY
       if (!apiKey) throw new Error('Server configuration error')
 
       const encoder = new TextEncoder()
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            // STEP 1: Reserve credit BEFORE Gemini call
-            const { data: reservation, error: reserveError } = await supabaseAdmin.rpc('reserve_analysis_credit', {
+            // STEP 1: Reserve credit BEFORE API call
+            const { error: reserveError } = await supabaseAdmin.rpc('reserve_analysis_credit', {
               p_user_id: user.id,
             })
 
             if (reserveError) {
               if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' })}\n\n`))
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.' }) + "\n\n"))
               } else {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Unable to verify account status.' })}\n\n`))
+                controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Unable to verify account status.' }) + "\n\n"))
               }
               return
             }
 
-            const modelName = 'gemini-2.5-flash'
-            const apiVersion = 'v1beta'
-            const prompt = `Analyze the following query for competitive weaknesses and opportunities: "${trimmedQuery}"\n\nRemember: Respond with ONLY valid JSON.`
+            const prompt = buildAnalysisPrompt(trimmedQuery)
             
-            let result;
+            const fullText = await streamWithFallback(prompt, controller, encoder)
+            
+            // Parse the complete response
+            let parsedReport: AnalysisReport
             try {
-              const modelWithSearch = genAI.getGenerativeModel(
-                { model: modelName, systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearchRetrieval: {} }] as never },
-                { apiVersion }
-              )
-              result = await modelWithSearch.generateContentStream({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              })
-            } catch (searchErr) {
-              logger.warn('[analyze] Search failed, retrying without search')
-              const modelNoSearch = genAI.getGenerativeModel(
-                { model: modelName, systemInstruction: SYSTEM_INSTRUCTION },
-                { apiVersion }
-              )
-              result = await modelNoSearch.generateContentStream({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              })
+              // Clean any potential markdown wrapping
+              let cleanedText = fullText
+              if (cleanedText.startsWith('```json')) cleanedText = cleanedText.substring(7)
+              else if (cleanedText.startsWith('```')) cleanedText = cleanedText.substring(3)
+              if (cleanedText.endsWith('```')) cleanedText = cleanedText.substring(0, cleanedText.length - 3)
+              
+              cleanedText = cleanedText.trim()
+              
+              const json = JSON.parse(cleanedText)
+              // Ensure we adhere to the specific response structure
+              parsedReport = {
+                executiveSummary: json.executiveSummary || '',
+                weaknessMatrix: (json.weaknessMatrix || []).map((w: Record<string, unknown>) => ({
+                  ...w, quotes: (w.quotes as string[]) || [], competitorsAffected: (w.competitorsAffected as unknown[]) || []
+                })),
+                comparisonTable: json.comparisonTable || [],
+                strategicRecommendations: json.strategicRecommendations || { strongestOpportunity: '', quickWinAlternative: '', redFlags: '' },
+                validationNextSteps: json.validationNextSteps || [],
+                sources: json.sources || []
+              } as AnalysisReport
+            } catch (parseErr) {
+              Sentry.captureException(parseErr)
+              // If JSON parsing fails, create a structured response from the raw text
+              parsedReport = {
+                executiveSummary: fullText,
+                weaknessMatrix: [],
+                comparisonTable: [],
+                strategicRecommendations: { strongestOpportunity: '', quickWinAlternative: '', redFlags: '' },
+                validationNextSteps: [],
+                sources: [],
+              }
             }
-            
-            let fullText = ''
-            for await (const chunk of result.stream) {
-              const chunkText = chunk.text()
-              fullText += chunkText
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`)
-              )
-            }
-            
-            let rawText = fullText.trim()
-            if (rawText.startsWith('```json')) rawText = rawText.substring(7)
-            else if (rawText.startsWith('```')) rawText = rawText.substring(3)
-            if (rawText.endsWith('```')) rawText = rawText.substring(0, rawText.length - 3)
-            rawText = rawText.trim()
-            
-            const json = JSON.parse(rawText)
-            const finalReport = {
-              executiveSummary: json.executiveSummary || '',
-              weaknessMatrix: (json.weaknessMatrix || []).map((w: Record<string, unknown>) => ({
-                ...w, quotes: (w.quotes as string[]) || [], competitorsAffected: (w.competitorsAffected as unknown[]) || []
-              })),
-              comparisonTable: json.comparisonTable || [],
-              strategicRecommendations: json.strategicRecommendations || { strongestOpportunity: '', quickWinAlternative: '', redFlags: '' },
-              validationNextSteps: json.validationNextSteps || [],
-              sources: json.sources || []
-            }
-            
+
             try {
                const { error: saveError } = await supabaseAdmin
                  .from('analysis_history')
                  .insert({
                    user_id: user.id,
                    query: trimmedQuery,
-                   report: finalReport,
+                   report: parsedReport,
                    created_at: new Date().toISOString(),
                  })
                
                if (saveError) {
                  await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
                  logger.error('[analyze] Failed to save', { error: saveError })
-                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis results.' })}\n\n`))
+                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis results.' }) + "\n\n"))
                } else {
-                 await setCachedAnalysis(trimmedQuery, user.id, finalReport)
-                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, report: finalReport })}\n\n`))
+                 await setCachedAnalysis(trimmedQuery, user.id, parsedReport)
+                 controller.enqueue(encoder.encode("data: " + JSON.stringify({ done: true, report: parsedReport }) + "\n\n"))
                }
             } catch (saveErr) {
                await supabaseAdmin.rpc('refund_analysis_credit', { p_user_id: user.id })
                logger.error('[analyze] Failed to save', { error: saveErr })
-               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Failed to save analysis results.' })}\n\n`))
+               controller.enqueue(encoder.encode("data: " + JSON.stringify({ error: 'Failed to save analysis results.' }) + "\n\n"))
             }
           } catch (err: unknown) {
-            // Refund the pre-decremented credit
-            await supabaseAdmin.rpc('refund_analysis_credit', {
-              p_user_id: user.id,
-            })
+            try {
+              await supabaseAdmin.rpc('refund_analysis_credit', {
+                p_user_id: user.id,
+              })
+            } catch (e) {}
+
             const error = err as { status?: number; message?: string }
             if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('quota')) {
-              Sentry.captureMessage('Gemini API rate limit hit', {
+              Sentry.captureMessage('Claude API rate limit hit', {
                 level: 'warning',
-                tags: { source: 'gemini_stream' }
+                tags: { source: 'claude_stream' }
               })
               
               controller.enqueue(
                 encoder.encode(
-                  `data: ${JSON.stringify({ 
+                  "data: " + JSON.stringify({ 
                     error: 'High demand — please try again in 60 seconds.',
                     retryAfter: 60
-                  })}\n\n`
+                  }) + "\n\n"
+                )
+              )
+            } else if (error?.status === 529 || error?.message?.includes('Overloaded')) {
+              Sentry.captureMessage('Claude API overloaded', {
+                level: 'warning',
+                tags: { source: 'claude_stream' },
+              })
+              controller.enqueue(
+                encoder.encode(
+                  "data: " + JSON.stringify({
+                    error: 'Service is busy. Please try again in a moment.',
+                  }) + "\n\n"
+                )
+              )
+            } else if (error?.status === 401 || error?.status === 403) {
+              Sentry.captureException(
+                new Error('Claude API authentication failed'),
+                { tags: { source: 'claude_stream' } }
+              )
+              controller.enqueue(
+                encoder.encode(
+                  "data: " + JSON.stringify({
+                    error: 'Analysis service configuration error.',
+                  }) + "\n\n"
                 )
               )
             } else {
               const errObj = err instanceof Error ? err : new Error(String(err))
               Sentry.captureException(errObj, {
                 tags: { 
-                  source: 'gemini_stream',
+                  source: 'claude_stream',
                   userId: user.id,
                 },
                 extra: {
@@ -345,16 +431,16 @@ export async function POST(req: NextRequest) {
               
               controller.enqueue(
                 encoder.encode(
-                  `data: ${JSON.stringify({ 
+                  "data: " + JSON.stringify({ 
                     error: 'Analysis failed. Please try again.' 
-                  })}\n\n`
+                  }) + "\n\n"
                 )
               )
             }
           } finally {
             timer.stop({ cached: false, queryLength: trimmedQuery.length })
             controller.close()
-            await redis().del(lockKey)
+            await redis().del(lockKey).catch(() => {})
           }
         }
       })
@@ -369,7 +455,7 @@ export async function POST(req: NextRequest) {
       })
       
     } catch (err) {
-      await redis().del(lockKey)
+      await redis().del(lockKey).catch(() => {})
       throw err
     }
   } catch (error: unknown) {
@@ -377,14 +463,13 @@ export async function POST(req: NextRequest) {
     logger.error('[analyze] Server error', { error: err.message, stack: err.stack })
     Sentry.captureException(err)
 
-    if (err.message?.includes('429') || err.message?.includes('quota')) {
+    if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('rate limit')) {
       return NextResponse.json(
         { error: 'API quota exceeded. Please wait before trying again.' },
         { status: 429 }
       )
     }
 
-    // Fix #9 (Audit 2): Never return raw error messages to the client
     return NextResponse.json(
       { error: 'An internal error occurred. Please try again.' },
       { status: 500 }
