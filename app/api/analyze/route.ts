@@ -9,6 +9,9 @@ import { MAX_CREDITS } from '@/lib/planUtils'
 import { PerformanceTimer } from '@/lib/monitoring'
 import { AnalysisReport } from '@/types'
 
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
+
 // ── Fix #1 + #6: Module-level singleton — instantiated once, not per request ──
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
