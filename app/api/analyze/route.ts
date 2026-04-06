@@ -59,10 +59,7 @@ async function reserveCredit(
   // Increment credits_used
   const { error: updateErr } = await db
     .from('profiles')
-    .update({
-      credits_used: currentCredits + 1,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ credits_used: currentCredits + 1 })
     .eq('id', userId)
 
   if (updateErr) {
@@ -85,10 +82,7 @@ async function refundCredit(db: AdminDb, userId: string): Promise<void> {
 
   await db
     .from('profiles')
-    .update({
-      credits_used: credits - 1,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ credits_used: credits - 1 })
     .eq('id', userId)
 }
 
