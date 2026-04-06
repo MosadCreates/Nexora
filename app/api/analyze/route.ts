@@ -159,15 +159,21 @@ async function streamWithFallback(
       logger.info('[analyze] Trying model', { model })
       fullText = ''
 
+      // Prefill assistant turn with '{' to guarantee JSON-first output (no preamble)
       const anthropicStream = await anthropic.messages.stream({
         model,
-        max_tokens: 4096,
+        max_tokens: 8000,
         system: `You are an expert competitive intelligence analyst.
-Your job is to analyze competitors and market positioning with deep,
-actionable insights. Always respond with valid JSON only — no markdown,
-no code blocks, no preamble. Your entire response must be parseable JSON.`,
-        messages: [{ role: 'user', content: prompt }],
+Respond ONLY with valid JSON. No markdown, no code fences, no explanation text.
+Your entire response must start with '{' and be parseable as JSON.`,
+        messages: [
+          { role: 'user', content: prompt },
+          { role: 'assistant', content: '{' },
+        ],
       })
+
+      // Prefill means Claude continues from '{', so we prepend it back
+      fullText = '{'
 
       for await (const event of anthropicStream) {
         if (
@@ -184,7 +190,7 @@ no code blocks, no preamble. Your entire response must be parseable JSON.`,
         }
       }
 
-      logger.info('[analyze] Model succeeded', { model })
+      logger.info('[analyze] Model succeeded', { model, responseLength: fullText.length })
       return fullText
 
     } catch (err: unknown) {
@@ -371,14 +377,14 @@ export async function POST(req: NextRequest) {
             const prompt = buildAnalysisPrompt(trimmedQuery)
             const fullText = await streamWithFallback(prompt, controller, encoder)
 
-            // Parse the response — robust extraction handles text before/after JSON
+            // Parse the response — robust extraction handles any wrapping text
             let parsedReport: AnalysisReport
             try {
               let cleanedText = fullText.trim()
               // Strip markdown code fences if present
               cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '')
               cleanedText = cleanedText.replace(/\s*```\s*$/i, '').trim()
-              // Extract the outermost JSON object even if Claude adds prose around it
+              // Extract outermost JSON object (handles any prose before/after)
               const jsonMatch = cleanedText.match(/\{[\s\S]*\}/)
               if (jsonMatch) cleanedText = jsonMatch[0]
 
@@ -402,16 +408,16 @@ export async function POST(req: NextRequest) {
                 )
               } as AnalysisReport
             } catch (parseErr) {
-              Sentry.captureException(parseErr)
-              logger.error('[analyze] JSON parse failed', { error: (parseErr as Error).message, preview: fullText.slice(0, 200) })
-              parsedReport = {
-                executiveSummary: 'Analysis completed but the response could not be parsed. Please try again.',
-                weaknessMatrix: [],
-                comparisonTable: [],
-                strategicRecommendations: { strongestOpportunity: '', quickWinAlternative: '', redFlags: '' },
-                validationNextSteps: [],
-                sources: [],
-              }
+              // Log first + last 300 chars to diagnose what Claude actually returned
+              logger.error('[analyze] JSON parse failed', {
+                error: (parseErr as Error).message,
+                start: fullText.slice(0, 300),
+                end: fullText.slice(-300),
+                length: fullText.length,
+              })
+              Sentry.captureException(parseErr, { extra: { preview: fullText.slice(0, 500) } })
+              // Surface the raw response so the user can retry and we can diagnose
+              throw new Error(`JSON_PARSE_FAILED: ${(parseErr as Error).message}`)
             }
 
             try {
