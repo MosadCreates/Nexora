@@ -1,15 +1,13 @@
 /**
- * Analysis Result Cache — Fix #9 + Fix #7 (Audit 2)
+ * Analysis Result Cache — Edge-compatible
  *
+ * Uses Web Crypto API (works in both Node.js 20+ and Edge Runtime).
  * SHA-256 hash of normalized query → cached JSON result in Upstash Redis.
  * TTL: 24 hours (86 400 seconds).
- *
- * Fix #7 (Audit 2): Cache keys are now namespaced by userId to prevent
- * cross-user data leakage.
+ * Cache keys namespaced by userId to prevent cross-user data leakage.
  */
 
 import { Redis } from '@upstash/redis'
-import crypto from 'crypto'
 
 let redis: Redis | null = null
 
@@ -26,8 +24,12 @@ function normalizeQuery(query: string): string {
   return query.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
-function hashQuery(query: string): string {
-  return crypto.createHash('sha256').update(normalizeQuery(query)).digest('hex')
+async function hashQuery(query: string): Promise<string> {
+  const normalized = normalizeQuery(query)
+  const msgBuffer = new TextEncoder().encode(normalized)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 const CACHE_TTL = 86_400 // 24 hours in seconds
@@ -40,7 +42,8 @@ export async function getCachedAnalysis(
   try {
     const r = getRedis()
     if (!r) return null
-    const key = KEY_PREFIX + userId + ':' + hashQuery(query)
+    const hash = await hashQuery(query)
+    const key = KEY_PREFIX + userId + ':' + hash
     const cached = await r.get(key)
     return cached ?? null
   } catch {
@@ -56,7 +59,8 @@ export async function setCachedAnalysis(
   try {
     const r = getRedis()
     if (!r) return
-    const key = KEY_PREFIX + userId + ':' + hashQuery(query)
+    const hash = await hashQuery(query)
+    const key = KEY_PREFIX + userId + ':' + hash
     await r.set(key, JSON.stringify(result), { ex: CACHE_TTL })
   } catch {
     // Silently fail — cache is an optimisation, not critical path

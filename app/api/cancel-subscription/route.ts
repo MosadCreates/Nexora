@@ -48,7 +48,13 @@ export async function POST(req: NextRequest) {
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey
+      serviceRoleKey,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+          headers: { 'x-connection-hint': 'read-write' },
+        },
+      }
     )
 
     // ── Fetch active subscription ──────────────────────────────────

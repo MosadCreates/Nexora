@@ -9,45 +9,70 @@ function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing Supabase admin credentials')
-  return createClient(url, key)
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: { 'x-connection-hint': 'read-write' },
+    },
+  })
 }
 
-// ── Idempotency: check + insert event ───────────────────────────────
+// ── Idempotency: atomic claim via INSERT + UNIQUE constraint ────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AdminClient = ReturnType<typeof createClient>
 
-async function isDuplicate(
-  admin: AdminClient,
-  eventId: string
-): Promise<boolean> {
-  const { data } = await admin
-    .from('webhook_events' as any)
-    .select('id')
-    .eq('event_id', eventId)
-    .maybeSingle()
-
-  return !!data
-}
-
-async function recordEvent(
+/**
+ * FIX #3: Atomic idempotency — single INSERT that relies on
+ * the UNIQUE constraint on event_id. If two identical webhooks
+ * arrive simultaneously, only one INSERT succeeds; the other
+ * gets a 23505 unique-violation and is safely rejected.
+ */
+async function tryClaimEvent(
   admin: AdminClient,
   eventId: string,
   eventType: string,
-  payload: unknown,
-  status: string,
-  errorMsg?: string
-) {
-  await (admin.from('webhook_events' as any) as any).upsert(
-    {
+  payload: unknown
+): Promise<boolean> {
+  try {
+    const { error } = await (admin.from('webhook_events' as any) as any).insert({
       event_id: eventId,
       event_type: eventType,
       payload,
+      status: 'processing',
+      created_at: new Date().toISOString(),
+    })
+
+    // Unique constraint violation → duplicate event
+    if (error?.code === '23505') {
+      logger.info('[webhook] Duplicate event ignored (UNIQUE violation)', { eventId })
+      return false
+    }
+
+    if (error) {
+      logger.error('[webhook] Failed to claim event', { error: error.message, eventId })
+      return false
+    }
+
+    return true
+  } catch (err) {
+    logger.error('[webhook] tryClaimEvent error', { error: (err as Error).message })
+    return false
+  }
+}
+
+async function updateEventStatus(
+  admin: AdminClient,
+  eventId: string,
+  status: string,
+  errorMsg?: string
+) {
+  await (admin.from('webhook_events' as any) as any)
+    .update({
       status,
       error_message: errorMsg ?? null,
-      created_at: new Date().toISOString(),
-    },
-    { onConflict: 'event_id' }
-  )
+      processed_at: new Date().toISOString(),
+    })
+    .eq('event_id', eventId)
 }
 
 // ── Subscription helpers ────────────────────────────────────────────
@@ -161,15 +186,11 @@ export async function POST(req: NextRequest) {
     (event.data?.id as string) ??
     `${event.type}-${Date.now()}`
 
-  // 5. Duplicate check
-  const duplicate = await isDuplicate(admin, eventId)
-  if (duplicate) {
-    logger.info('[webhook] Duplicate event skipped', { eventId })
+  // 5. Atomic claim — INSERT fails if event_id already exists (FIX #3)
+  const claimed = await tryClaimEvent(admin, eventId, event.type, event)
+  if (!claimed) {
     return NextResponse.json({ received: true, duplicate: true })
   }
-
-  // 6. Record event as processing
-  await recordEvent(admin, eventId, event.type, event, 'processing')
 
   try {
     const data = event.data
@@ -189,7 +210,7 @@ export async function POST(req: NextRequest) {
           logger.warn('[webhook] subscription.created — unknown product ID', {
             productId: fields.productId,
           })
-          await recordEvent(admin, eventId, event.type, event, 'ignored', 'Unknown product ID')
+          await updateEventStatus(admin, eventId, 'ignored', 'Unknown product ID')
           return NextResponse.json(
             { received: true, warning: 'Unknown product ID — ignored' },
             { status: 200 }
@@ -227,7 +248,7 @@ export async function POST(req: NextRequest) {
           logger.warn('[webhook] subscription.updated — unknown product ID', {
             productId: fields.productId,
           })
-          await recordEvent(admin, eventId, event.type, event, 'ignored', 'Unknown product ID')
+          await updateEventStatus(admin, eventId, 'ignored', 'Unknown product ID')
           return NextResponse.json(
             { received: true, warning: 'Unknown product ID — ignored' },
             { status: 200 }
@@ -413,7 +434,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 7. Mark event as processed
-    await recordEvent(admin, eventId, event.type, event, 'processed')
+    await updateEventStatus(admin, eventId, 'processed')
 
     return NextResponse.json({ received: true })
   } catch (error) {
@@ -425,7 +446,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Mark event as failed
-    await recordEvent(admin, eventId, event.type, event, 'failed', err.message)
+    await updateEventStatus(admin, eventId, 'failed', err.message)
 
     return NextResponse.json(
       { error: 'Webhook processing failed' },

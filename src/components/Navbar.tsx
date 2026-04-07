@@ -283,9 +283,33 @@ function Navbar ({
                   </Link>
                 )}
                 {credits !== undefined && (
-                  <div data-tour="credits-counter" className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold whitespace-nowrap'>
-                    <Sparkles className='w-3 h-3' />
-                    <span>{credits} Credits</span>
+                  <div className='flex gap-2 items-center'>
+                    <div data-tour="credits-counter" className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold whitespace-nowrap'>
+                      <Sparkles className='w-3 h-3' />
+                      <span>{credits} Credits</span>
+                    </div>
+                    {Number(credits) === 1 && (
+                      <div className='hidden md:flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full text-xs'>
+                        <span>⚡</span>
+                        <span className='text-amber-700 dark:text-amber-300'>
+                          Last credit remaining —{' '}
+                          <Link href="/pricing" className='font-bold underline hover:no-underline'>
+                            Upgrade now
+                          </Link>
+                        </span>
+                      </div>
+                    )}
+                    {Number(credits) === 0 && (
+                      <div className='hidden md:flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-full text-xs'>
+                        <span>🔒</span>
+                        <span className='text-red-700 dark:text-red-300'>
+                          No credits left —{' '}
+                          <Link href="/pricing" className='font-bold underline hover:no-underline'>
+                            Upgrade to continue
+                          </Link>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <UserMenu

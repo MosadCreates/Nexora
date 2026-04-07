@@ -2,6 +2,15 @@
 import React from 'react';
 import { AnalysisReport } from '../types';
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
 interface ReportViewProps {
   report: AnalysisReport;
 }
@@ -181,18 +190,24 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Evidence Sources</h2>
           <div className="flex flex-wrap gap-2">
             {report.sources.map((source, i) => (
-              <a 
-                key={i} 
-                href={source.uri} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-1 bg-white border border-gray-200 rounded-full text-xs text-blue-600 hover:bg-blue-50 transition-colors"
-              >
-                {source.title}
-                <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+              isSafeUrl(source.uri) ? (
+                <a 
+                  key={i} 
+                  href={source.uri} 
+                  target="_blank" 
+                  rel="noopener noreferrer nofollow"
+                  className="inline-flex items-center px-3 py-1 bg-white border border-gray-200 rounded-full text-xs text-blue-600 hover:bg-blue-50 transition-colors"
+                >
+                  {source.title}
+                  <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              ) : (
+                <span key={i} className="inline-flex items-center px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs text-neutral-500">
+                  {source.title}
+                </span>
+              )
             ))}
           </div>
         </section>

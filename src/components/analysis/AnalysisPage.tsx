@@ -45,6 +45,24 @@ export const AnalysisPage: React.FC = () => {
   )
   const processingPaymentRef = useRef(false)
 
+  const needsEmailConfirm = searchParams.get('confirm_email') === 'true'
+  const handleResendConfirmation = async () => {
+    try {
+      const email = session?.user?.email
+      if (!email) return
+      await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/analysis`
+        }
+      })
+      alert('Confirmation email sent! Check your inbox.')
+    } catch {
+      alert('Failed to resend email. Please try again.')
+    }
+  }
+
   // Keep ref in sync with state:
   useEffect(() => {
     processingPaymentRef.current = processingPayment
@@ -367,6 +385,25 @@ export const AnalysisPage: React.FC = () => {
         profile={profile}
         credits={remainingCredits}
       />
+
+      {needsEmailConfirm && (
+        <div className='max-w-4xl mx-auto px-4 pt-20 pb-0'>
+          <div className='bg-blue-50 dark:bg-blue-950/30 border 
+                          border-blue-200 dark:border-blue-800 
+                          rounded-xl p-3 flex items-center justify-between'>
+            <p className='text-sm text-blue-700 dark:text-blue-300'>
+              📧 Please confirm your email to keep full access.
+            </p>
+            <button
+              onClick={handleResendConfirmation}
+              className='text-xs font-medium text-blue-600 
+                         underline hover:no-underline ml-4'
+            >
+              Resend email
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Fix #5: Post-checkout banners */}
       {processingPayment && (

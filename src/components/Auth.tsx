@@ -244,12 +244,10 @@ const Auth: React.FC = () => {
           // If auto-sign-in is enabled (no email confirmation needed)
           router.push('/')
         } else {
-          // Email confirmation required
-          setMessage({
-            type: 'success',
-            text: "Account created! Check your email for a confirmation link. If it doesn't arrive within 5 minutes, use the resend button below."
-          })
-          setNeedsEmailConfirmation(true)
+          // User created but needs email confirmation
+          // Instead of hard blocking, redirect to analysis
+          // with a soft reminder banner
+          router.push('/analysis?confirm_email=true')
         }
       } else {
         // Fix #14 (Audit 2): Removed console.log that exposed email
