@@ -1,6 +1,7 @@
 /**
- * Structured Logger — Fix #14
+ * Structured Logger — Edge-compatible
  *
+ * Uses console methods (works on both Node.js and Edge Runtime).
  * JSON output in production, pretty console in development.
  * Automatically redacts sensitive fields in context objects.
  */
@@ -35,8 +36,11 @@ function emit(level: LogLevel, message: string, context?: Record<string, unknown
       ...(safeCtx && { context: safeCtx }),
     }
     const line = JSON.stringify(entry)
-    if (level === 'error') process.stderr.write(line + '\n')
-    else process.stdout.write(line + '\n')
+    if (level === 'error') {
+      console.error(line)
+    } else {
+      console.log(line)
+    }
   } else {
     const prefix = { debug: '🐛', info: 'ℹ️', warn: '⚠️', error: '❌' }[level]
     const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log

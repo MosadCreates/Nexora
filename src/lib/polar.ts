@@ -22,7 +22,7 @@ export async function redirectToPolarCheckout(
     body: JSON.stringify({
       productId,
       email,
-      successUrl: `${window.location.origin}/success`,
+      successUrl: `${window.location.origin}/analysis?checkout=success`,
       cancelUrl: `${window.location.origin}/pricing`,
     }),
   })

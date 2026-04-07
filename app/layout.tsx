@@ -67,7 +67,7 @@ export const metadata: Metadata = {
 };
 
 function StructuredData() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nexora.app'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraintel.com'
 
   const organizationSchema = {
     '@context': 'https://schema.org',
