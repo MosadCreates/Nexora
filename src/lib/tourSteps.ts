@@ -12,8 +12,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
     icon: '🎯',
-    title: 'Welcome to Nexora',
-    description: "You're about to get AI-powered intelligence on your competitors. This quick tour will show you everything you need to know. It takes less than 2 minutes.",
+    title: 'Strategic Intelligence Onboarding',
+    description: "Welcome to Nexora. You're now equipped with an autonomous market intelligence engine. We'll guide you through the core architecture of your new workspace.",
     targetSelector: null,
     page: '/analysis',
     arrowDirection: null,
@@ -21,8 +21,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'search-bar',
     icon: '🔍', 
-    title: 'Ask About Any Competitor',
-    description: "Type any competitor name, product, or market here. For example: 'Analyze Notion's weaknesses' or 'Compare Slack vs Teams'. Nexora's AI does the rest.",
+    title: 'Neural Query Interface',
+    description: "Initiate your research by submitting a competitor, niche, or specific market query. Our AI swarms will crawl professional networks and reviews to synthesize insights.",
     targetSelector: '[data-tour="search-input"]',
     page: '/analysis',
     arrowDirection: 'down',
@@ -30,8 +30,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'credits-counter',
     icon: '⚡',
-    title: 'Your Analysis Credits',
-    description: "Each analysis costs 1 credit. Free plan includes 3 credits per month. Upgrade anytime for more. Your remaining credits are always shown here.",
+    title: 'Operational Bandwidth',
+    description: "Monitor your available intelligence credits here. Each deep-scan utilizes high-performance compute nodes to generate your reports.",
     targetSelector: '[data-tour="credits-counter"]',
     page: '/analysis',
     arrowDirection: 'up',
@@ -39,8 +39,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'run-analysis',
     icon: '🚀',
-    title: 'Run Your First Analysis',
-    description: "Click this button to start an AI analysis. Results stream in real-time — you'll see insights appearing within seconds, not minutes.",
+    title: 'Execute Synthesis',
+    description: "Launch your autonomous analysis. Watch in real-time as the engine processes market signals and builds your strategic matrix.",
     targetSelector: '[data-tour="analyze-button"]',
     page: '/analysis',
     arrowDirection: 'left',
@@ -48,8 +48,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'analysis-report',
     icon: '📊',
-    title: 'Your Intelligence Report',
-    description: "After analysis, your full report appears here. It includes competitor weaknesses, market opportunities, positioning gaps, and strategic recommendations.",
+    title: 'Intelligence Matrix',
+    description: "Your finalized intelligence report surfaces here. It contains competitor weakness mapping, opportunity scoring, and actionable market positioning.",
     targetSelector: '[data-tour="results-area"]',
     page: '/analysis',
     arrowDirection: 'left',
@@ -57,8 +57,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'analysis-history',
     icon: '📋',
-    title: 'Your Analysis History',
-    description: "Every analysis you run is saved here. Access past reports anytime, compare competitors over time, and track market changes.",
+    title: 'Historical Archive',
+    description: "Every intelligence report is permanently archived for your review. Track market drift and competitor evolution over time.",
     targetSelector: '[data-tour="history-list"]',
     page: '/analysis',
     arrowDirection: 'right',
@@ -66,8 +66,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'download-report',
     icon: '📥',
-    title: 'Export Your Reports',
-    description: "Download any analysis as PDF, JSON, or CSV. Share insights with your team or import them into your existing workflow.",
+    title: 'Data Portability',
+    description: "Export your findings for internal distribution. We support high-fidelity PDF, structured JSON, and CSV formats across various plan tiers.",
     targetSelector: '[data-tour="download-button"]',
     page: '/analysis',
     arrowDirection: 'up',
@@ -75,10 +75,19 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'profile-billing',
     icon: '👤',
-    title: 'Manage Your Account',
-    description: "Access your profile, manage your subscription, upgrade your plan, and track your usage — all from here.",
+    title: 'Command Center',
+    description: "Manage your subscription, clear your operational history, or adjust your organizational profile from your primary account hub.",
     targetSelector: '[data-tour="profile-button"]',
     page: 'any',
     arrowDirection: 'up',
+  },
+  {
+    id: 'conclusion',
+    icon: '🌟',
+    title: 'Onboarding Complete',
+    description: "Your strategic onboarding is now finalized. The market is moving — it's time to start your first scan.",
+    targetSelector: null,
+    page: '/analysis',
+    arrowDirection: null,
   }
 ]

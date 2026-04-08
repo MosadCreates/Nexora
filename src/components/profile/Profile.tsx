@@ -356,10 +356,13 @@ const Profile: React.FC = () => {
 
           <div className='flex justify-center'>
             <button
-              onClick={() => startTour()}
-              className="text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition flex items-center gap-2"
+              onClick={() => {
+                router.push('/analysis');
+                setTimeout(() => startTour(), 500);
+              }}
+              className="text-sm font-bold text-neutral-400 hover:text-blue-500 dark:hover:text-blue-400 transition-all flex items-center gap-2 px-6 py-3 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10"
             >
-              <span>↺</span> Restart product tour
+              <span>↺</span> Restart Platform Onboarding
             </button>
           </div>
 

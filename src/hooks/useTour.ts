@@ -79,7 +79,10 @@ export function useTour() {
     startTour: () => { 
       setCurrentStep(0)
       setIsActive(true) 
-      if (typeof window !== 'undefined') localStorage.setItem('nexora-tour-step', '0')
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nexora-tour-step', '0')
+        localStorage.removeItem('nexora-tour-completed')
+      }
     },
     nextStep: () => {
       if (currentStep < TOUR_STEPS.length - 1) {
