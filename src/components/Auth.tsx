@@ -245,9 +245,10 @@ const Auth: React.FC = () => {
           router.push('/')
         } else {
           // User created but needs email confirmation
-          // Instead of hard blocking, redirect to analysis
-          // with a soft reminder banner
-          router.push('/analysis?confirm_email=true')
+          // Middleware rejects unauthorized users, so we can't redirect to /analysis
+          // Instead, show a success message right here on the Auth page.
+          setMessage({ type: 'success', text: 'Account created! Please check your email inbox to confirm your account.' })
+          setNeedsEmailConfirmation(true)
         }
       } else {
         // Fix #14 (Audit 2): Removed console.log that exposed email

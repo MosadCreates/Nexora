@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
+import * as Sentry from '@sentry/nextjs'
 import { logger } from '@/lib/logger'
 import { getProductPlanSlug } from '@/lib/planUtils'
 
@@ -443,6 +444,12 @@ export async function POST(req: NextRequest) {
       eventId,
       type: event.type,
       error: err.message,
+    })
+    
+    // Capture to Sentry so we have visibility into billing failures
+    Sentry.captureException(err, { 
+      tags: { source: 'polar_webhook' },
+      extra: { eventId, eventType: event.type } 
     })
 
     // Mark event as failed
