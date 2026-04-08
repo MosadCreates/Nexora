@@ -95,8 +95,8 @@ export const Privacy: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="p-8 rounded-[2rem] bg-white/80 dark:bg-black/80 border border-neutral-200 dark:border-neutral-800 shadow-2xl hover:shadow-blue-500/10 transition-shadow duration-500">
                   <p className="font-bold text-xl text-black dark:text-white mb-3">Privacy Integrity Team</p>
-                  <a href="mailto:privacy@nexora.ai" className="text-xl font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors block mb-2">
-                    privacy@nexora.ai
+                  <a href="mailto:hello@nexoraintel.com" className="text-xl font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors block mb-2">
+                    hello@nexoraintel.com
                   </a>
                   <p className="text-sm text-neutral-500">Global response time: 24-72 hours.</p>
                 </div>
@@ -111,10 +111,6 @@ export const Privacy: React.FC = () => {
               
               <div className="mt-12 pt-8 border-t border-neutral-200 dark:border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-neutral-500 tracking-wider uppercase font-medium">
                 <p>© 2026 NEXORA. AI-FIRST PRIVACY.</p>
-                <div className="flex gap-6">
-                   <a href="#" className="hover:text-black dark:hover:text-white transition-colors">Audit Policy</a>
-                   <a href="#" className="hover:text-black dark:hover:text-white transition-colors">Neural Safeguards</a>
-                </div>
               </div>
             </div>
           </section>
