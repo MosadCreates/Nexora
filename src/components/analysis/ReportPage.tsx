@@ -48,7 +48,7 @@ const DOWNLOAD_FORMATS = [
     label: 'CSV',
     icon: FileSpreadsheet,
     description: 'Spreadsheet format',
-    minPlan: 'starter' as SubscriptionPlan,
+    minPlan: 'hobby' as SubscriptionPlan,
     color: 'text-emerald-500'
   },
   {
@@ -56,7 +56,7 @@ const DOWNLOAD_FORMATS = [
     label: 'PDF',
     icon: FileDown,
     description: 'Professional report',
-    minPlan: 'hobby' as SubscriptionPlan,
+    minPlan: 'starter' as SubscriptionPlan,
     color: 'text-blue-500'
   }
 ]
