@@ -294,36 +294,57 @@ const Profile: React.FC = () => {
             </div>
           </section>
 
-          {/* Strategic Resources Section */}
+          {/* Account Overview Section */}
           <section>
             <h2 className='text-sm font-bold uppercase tracking-[0.2em] text-neutral-400 mb-8 px-2 inline-block bg-neutral-100 dark:bg-white/5 py-1 rounded'>
-              Strategic Support
+              Account Details
             </h2>
 
             <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
-              {[
-                { title: 'Strategic Playbook', desc: 'Detailed documentation for intelligence flows.', icon: <BookOpen className='w-5 h-5' />, tag: 'DOCS' },
-                { title: 'Analyst Concierge', desc: 'Direct uplink for priority support requests.', icon: <LifeBuoy className='w-5 h-5' />, tag: 'SUPPORT' },
-                { title: 'Nexus Portal', desc: 'Manage your global intelligence infrastructure.', icon: <Activity className='w-5 h-5' />, tag: 'SYSTEM' }
-              ].map((item, i) => (
-                <motion.a 
-                  key={i}
-                  href='#'
-                  whileHover={{ y: -5 }}
-                  className='p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-900/50 flex flex-col gap-4 group transition-all duration-300 hover:shadow-xl hover:shadow-neutral-500/5'
-                >
-                  <div className='p-3 w-max rounded-xl bg-white dark:bg-black border border-neutral-200 dark:border-white/10 text-neutral-500 transition-colors group-hover:text-blue-500'>
-                    {item.icon}
-                  </div>
-                  <div className='space-y-2'>
-                    <h4 className='font-bold text-sm text-black dark:text-white'>{item.title}</h4>
-                    <p className='text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal'>{item.desc}</p>
-                  </div>
-                  <div className='mt-auto pt-4 border-t border-neutral-200 dark:border-white/5'>
-                    <span className='text-[8px] font-bold text-neutral-400 tracking-widest'>{item.tag}</span>
-                  </div>
-                </motion.a>
-              ))}
+              <div className='p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-900/50 flex flex-col gap-4 group'>
+                <div className='p-3 w-max rounded-xl bg-white dark:bg-black border border-neutral-200 dark:border-white/10 text-neutral-500'>
+                  <Mail className='w-5 h-5' />
+                </div>
+                <div className='space-y-2'>
+                  <h4 className='font-bold text-sm text-black dark:text-white'>Contact Identity</h4>
+                  <p className='text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal break-all' title={session?.user?.email}>
+                    {session?.user?.email || 'No email associated'}
+                  </p>
+                </div>
+                <div className='mt-auto pt-4 border-t border-neutral-200 dark:border-white/5'>
+                  <span className='text-[8px] font-bold text-neutral-400 tracking-widest'>PRIMARY EMAIL</span>
+                </div>
+              </div>
+
+              <div className='p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-900/50 flex flex-col gap-4 group'>
+                <div className='p-3 w-max rounded-xl bg-white dark:bg-black border border-neutral-200 dark:border-white/10 text-neutral-500'>
+                  <User className='w-5 h-5' />
+                </div>
+                <div className='space-y-2'>
+                  <h4 className='font-bold text-sm text-black dark:text-white'>System Profile</h4>
+                  <p className='text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal truncate' title={profile?.id}>
+                    ID: {profile?.id || session?.user?.id || 'Unknown'}
+                  </p>
+                </div>
+                <div className='mt-auto pt-4 border-t border-neutral-200 dark:border-white/5'>
+                  <span className='text-[8px] font-bold text-neutral-400 tracking-widest'>USER IDENTIFIER</span>
+                </div>
+              </div>
+
+              <div className='p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-900/50 flex flex-col gap-4 group'>
+                <div className='p-3 w-max rounded-xl bg-white dark:bg-black border border-neutral-200 dark:border-white/10 text-neutral-500'>
+                  <Calendar className='w-5 h-5' />
+                </div>
+                <div className='space-y-2'>
+                  <h4 className='font-bold text-sm text-black dark:text-white'>Operational Since</h4>
+                  <p className='text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal'>
+                    {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Recently Activated'}
+                  </p>
+                </div>
+                <div className='mt-auto pt-4 border-t border-neutral-200 dark:border-white/5'>
+                  <span className='text-[8px] font-bold text-neutral-400 tracking-widest'>JOIN DATE</span>
+                </div>
+              </div>
             </div>
           </section>
 
