@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation'
 import { SubscriptionPlan } from '@/types'
 import * as Sentry from '@sentry/nextjs'
 import { createBrowserClient } from '@supabase/ssr'
+import { motion, AnimatePresence } from 'framer-motion'
+import { AlertCircle, X } from 'lucide-react'
 
 interface PricingCardsProps {
   currentPlan?: SubscriptionPlan
@@ -30,6 +32,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   const [sessionToken, setSessionToken] = useState<string | undefined>(accessTokenProp)
   const [sessionEmail, setSessionEmail] = useState<string | undefined>(userEmail)
   const [sessionUserId, setSessionUserId] = useState<string | undefined>(userId)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const router = useRouter()
 
   // Self-fetch session so this component works even when the parent
@@ -110,7 +113,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error))
       Sentry.captureException(err)
-      alert(`Failed to start checkout: ${err.message}`)
+      setCheckoutError(`Failed to start checkout: ${err.message}`)
       setLoading(null)
     }
   }
@@ -189,7 +192,43 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   ]
 
   return (
-    <div className='w-full flex flex-col items-center justify-center bg-white dark:bg-black'>
+    <div className='w-full flex flex-col items-center justify-center bg-white dark:bg-black relative'>
+      <AnimatePresence>
+        {checkoutError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed top-24 right-4 z-50 md:right-8 lg:right-12"
+          >
+            <div className="flex items-start gap-4 bg-white dark:bg-[#0F172A] border border-red-200 dark:border-red-900/50 shadow-2xl rounded-xl p-4 max-w-sm w-full dark:shadow-red-900/10 backdrop-blur-xl">
+              <div className="flex-shrink-0 mt-0.5">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+              </div>
+              <div className="flex-1 w-0">
+                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  Checkout Error
+                </p>
+                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                  {checkoutError}
+                </p>
+              </div>
+              <div className="flex-shrink-0 flex ml-4">
+                <button
+                  type="button"
+                  className="inline-flex rounded-md bg-transparent text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 transition-colors"
+                  onClick={() => setCheckoutError(null)}
+                >
+                  <span className="sr-only">Close</span>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <GridBackground
         className='w-full'
         containerClassName='h-auto min-h-fit py-10 flex flex-col items-center justify-start overflow-hidden'
