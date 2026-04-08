@@ -73,7 +73,7 @@ async function streamWithFallback(
 ): Promise<string> {
   // FIX #8: Two models — cheap primary + quality fallback
   const models = [
-    'claude-haiku-4-5-20251001',
+    'claude-haiku-4-5-20251014',
     'claude-sonnet-4-5',
   ]
 
@@ -92,7 +92,7 @@ async function streamWithFallback(
 
       const anthropicStream = anthropic.messages.stream({
         model,
-        max_tokens: 6000,
+        max_tokens: 4096,
         system: `You are an expert competitive intelligence analyst.
 Respond ONLY with valid JSON. No markdown, no code fences, no explanation text.
 Your entire response must start with '{' and be parseable as JSON.
