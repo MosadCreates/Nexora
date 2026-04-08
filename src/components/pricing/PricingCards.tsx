@@ -200,9 +200,9 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="fixed top-24 right-4 z-50 md:right-8 lg:right-12"
+            className="fixed top-24 right-4 z-[100] md:right-8 lg:right-12 w-[calc(100vw-2rem)] sm:w-[380px]"
           >
-            <div className="flex items-start gap-4 bg-white dark:bg-[#0F172A] border border-red-200 dark:border-red-900/50 shadow-2xl rounded-xl p-4 max-w-sm w-full dark:shadow-red-900/10 backdrop-blur-xl">
+            <div className="flex items-start gap-4 bg-white dark:bg-[#0F172A] border border-red-200 dark:border-red-900/50 shadow-2xl rounded-xl p-4 w-full dark:shadow-red-900/10 backdrop-blur-xl">
               <div className="flex-shrink-0 mt-0.5">
                 <AlertCircle className="h-5 w-5 text-red-500" />
               </div>
