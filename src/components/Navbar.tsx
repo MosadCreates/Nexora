@@ -227,18 +227,6 @@ function Navbar ({
               >
                 Pricing
               </Link>
-              <Link
-                className={cn(
-                  'flex items-center justify-center text-sm leading-[110%] px-4 py-2 rounded-md hover:bg-[#F5F5F5] dark:hover:bg-neutral-800 hover:text-black transition-colors',
-                  isActive('/blog')
-                    ? 'bg-[#F5F5F5] dark:bg-neutral-800 text-black dark:text-white font-medium'
-                    : 'text-muted dark:text-muted-dark'
-                )}
-                href='/blog'
-                prefetch={true}
-              >
-                Blog
-              </Link>
 
               <Link
                 className={cn(
@@ -430,18 +418,6 @@ function Navbar ({
                 onClick={() => setIsOpen(false)}
               >
                 Pricing
-              </Link>
-              <Link
-                className={cn(
-                  'text-sm font-medium p-3 rounded-xl transition-colors',
-                  isActive('/blog')
-                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                    : 'hover:bg-gray-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                )}
-                href='/blog'
-                onClick={() => setIsOpen(false)}
-              >
-                Blog
               </Link>
 
               <Link

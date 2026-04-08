@@ -48,13 +48,7 @@ export function Footer () {
               >
                 Pricing
               </Link>
-              <Link
-                href='/blog'
-                prefetch={true}
-                className='hover:text-blue-500 dark:hover:text-blue-400 transition-colors'
-              >
-                Blog
-              </Link>
+
               <Link
                 href='/contact'
                 prefetch={true}
