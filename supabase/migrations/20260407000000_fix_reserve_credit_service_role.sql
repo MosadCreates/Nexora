@@ -45,8 +45,7 @@ BEGIN
 
   -- PRE-DECREMENT: Reserve the credit NOW
   UPDATE public.profiles
-  SET credits_used = credits_used + 1,
-      updated_at = NOW()
+  SET credits_used = credits_used + 1
   WHERE id = p_user_id;
 
   RETURN jsonb_build_object(
