@@ -42,6 +42,14 @@ const SECURITY_HEADERS: Record<string, string> = {
 }
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+  
+  // ── FIX #21: Absolute immediate bypass for webhooks ────────────────
+  // This is the first thing that happens. No headers, no supabase, no redirects.
+  if (pathname.startsWith('/api/webhooks')) {
+    return NextResponse.next()
+  }
+
   // Create a response that we'll modify
   let response = NextResponse.next({
     request: { headers: request.headers },
@@ -49,7 +57,7 @@ export async function middleware(request: NextRequest) {
 
   // At the TOP of the middleware function, before all other checks:
   const maintenanceMode = process.env.MAINTENANCE_MODE === 'true'
-  const pathname = request.nextUrl.pathname
+  const isMaintenancePage = pathname === '/status' || pathname === '/api/health'
 
   if (maintenanceMode) {
     // Allow homepage, status page, health check, and critical webhooks
@@ -159,6 +167,7 @@ export async function middleware(request: NextRequest) {
 // ── Matcher: exclude static files and images ────────────────────────
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Exclude static assets and the webhook endpoint from middleware
+    '/((?!api/webhooks|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
