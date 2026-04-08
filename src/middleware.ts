@@ -52,10 +52,15 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   if (maintenanceMode) {
-    // Allow only the homepage and status page
-    const allowedInMaintenance = ['/', '/status', '/api/health']
+    // Allow homepage, status page, health check, and critical webhooks
+    const allowedInMaintenance = [
+      '/', 
+      '/status', 
+      '/api/health', 
+      '/api/webhooks/polar'
+    ]
     const isAllowed = allowedInMaintenance.some(
-      path => pathname === path
+      path => pathname === path || pathname.startsWith(path + '/')
     )
     
     if (!isAllowed) {
