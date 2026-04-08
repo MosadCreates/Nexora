@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   },
   verification: {
     google: '6BXhz6AmCs1B0bFsQKAu4qSR74KN6LH4_vDaSMHyIT4', // just the content value, not the full tag
+    other: {
+      'msvalidate.01': 'A55F89A6E07D4F6F4CC40B82F5A2A9FD',
+    },
   },
   openGraph: {
     title: "Nexora | See what's next in your market",
