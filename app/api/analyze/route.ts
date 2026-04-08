@@ -73,8 +73,8 @@ async function streamWithFallback(
 ): Promise<string> {
   // FIX #8: Two models — cheap primary + quality fallback
   const models = [
-    'claude-haiku-4-5-20251014',
-    'claude-sonnet-4-5-20250514',
+    'claude-haiku-4-5-20251001',
+    'claude-sonnet-4-5',
   ]
 
   let lastError: unknown
@@ -290,8 +290,6 @@ export async function POST(req: NextRequest) {
                   userId: user.id,
                   errorMessage: reserveError.message,
                   errorCode: reserveError.code,
-                  errorDetails: reserveError.details,
-                  errorHint: reserveError.hint,
                 })
                 if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
                   controller.enqueue(encoder.encode(
@@ -300,7 +298,7 @@ export async function POST(req: NextRequest) {
                 } else {
                   Sentry.captureException(new Error(reserveError.message), { tags: { source: 'reserve_credit' } })
                   controller.enqueue(encoder.encode(
-                    `data: ${JSON.stringify({ error: `Unable to verify account status: ${reserveError.message}` })}\n\n`
+                    `data: ${JSON.stringify({ error: 'Unable to verify account status. Please try again.' })}\n\n`
                   ))
                 }
                 return
@@ -371,8 +369,6 @@ export async function POST(req: NextRequest) {
                 userId: user.id,
                 errorMessage: reserveError.message,
                 errorCode: reserveError.code,
-                errorDetails: reserveError.details,
-                errorHint: reserveError.hint,
               })
               if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
                 controller.enqueue(encoder.encode(
@@ -381,7 +377,7 @@ export async function POST(req: NextRequest) {
               } else {
                 Sentry.captureException(new Error(reserveError.message), { tags: { source: 'reserve_credit' } })
                 controller.enqueue(encoder.encode(
-                  `data: ${JSON.stringify({ error: `Unable to verify account status: ${reserveError.message}` })}\n\n`
+                  `data: ${JSON.stringify({ error: 'Unable to verify account status. Please try again.' })}\n\n`
                 ))
               }
               return
@@ -534,9 +530,14 @@ export async function POST(req: NextRequest) {
                 tags: { source: 'claude_stream', userId: user.id },
                 extra: { query: trimmedQuery, errorMessage: errObj.message },
               })
-              logger.error('[analyze] Stream error', { error: errObj.message, userId: user.id })
+              logger.error('[analyze] Stream error', {
+                error: errObj.message,
+                errorStack: errObj.stack,
+                errorStatus: (err as { status?: number }).status,
+                userId: user.id,
+              })
               controller.enqueue(encoder.encode(
-                `data: ${JSON.stringify({ error: 'Analysis failed. Please try again.' })}\n\n`
+                `data: ${JSON.stringify({ error: `Analysis failed: ${errObj.message}` })}\n\n`
               ))
             }
           } finally {
