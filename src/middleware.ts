@@ -43,11 +43,29 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const method = request.method
   
   // ── FIX #21: Absolute immediate bypass for webhooks ────────────────
   // This is the first thing that happens. No headers, no supabase, no redirects.
   if (pathname.startsWith('/api/webhooks')) {
     return NextResponse.next()
+  }
+
+  // ── FIX #22: Prevent domain/www redirects for API POST requests ──────
+  // If we are on the wrong domain but it's a POST request (checkout, analyze),
+  // we MUST NOT redirect or we lose the payload and get a 307/400.
+  const host = request.headers.get('host') || ''
+  const isWww = host.startsWith('www.')
+  
+  // If it's a POST request, we allow it on any domain without redirecting.
+  // The route handler origin checks will handle security.
+  if (method === 'POST') {
+    // Just proceed to the next middleware step
+  } else if (isWww && process.env.NODE_ENV === 'production') {
+    // For GET requests on www, we redirect to canonical (if canonical isn't www)
+    const url = request.nextUrl.clone()
+    url.host = host.replace('www.', '')
+    return NextResponse.redirect(url, 301) // Permanent redirect for SEO
   }
 
   // Create a response that we'll modify
@@ -57,7 +75,6 @@ export async function middleware(request: NextRequest) {
 
   // At the TOP of the middleware function, before all other checks:
   const maintenanceMode = process.env.MAINTENANCE_MODE === 'true'
-  const isMaintenancePage = pathname === '/status' || pathname === '/api/health'
 
   if (maintenanceMode) {
     // Allow homepage, status page, health check, and critical webhooks
