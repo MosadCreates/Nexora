@@ -21,12 +21,17 @@ const VALID_PRODUCT_IDS = new Set(
 function isValidRedirectUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
-    const allowedOrigins = [
-      process.env.NEXT_PUBLIC_APP_URL,
-      'http://localhost:3000',
-      'http://localhost:3001',
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const appBase = appUrl.replace(/^https?:\/\/(www\.)?/, '')
+    const originBase = parsed.origin.replace(/^https?:\/\/(www\.)?/, '')
+
+    const allowedBases = [
+      appBase,
+      'localhost:3000',
+      'localhost:3001',
     ].filter(Boolean)
-    return allowedOrigins.some(origin => parsed.origin === origin)
+
+    return allowedBases.some(base => originBase === base)
   } catch {
     return false
   }
