@@ -22,6 +22,12 @@ function isValidRedirectUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+
+    // If NEXT_PUBLIC_APP_URL is not configured, only block non-http(s) schemes
+    if (!appUrl) {
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+    }
+
     const appBase = appUrl.replace(/^https?:\/\/(www\.)?/, '')
     const originBase = parsed.origin.replace(/^https?:\/\/(www\.)?/, '')
 
