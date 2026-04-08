@@ -286,6 +286,13 @@ export async function POST(req: NextRequest) {
               )
 
               if (reserveError) {
+                logger.error('[analyze] reserve_analysis_credit failed (cached path)', {
+                  userId: user.id,
+                  errorMessage: reserveError.message,
+                  errorCode: reserveError.code,
+                  errorDetails: reserveError.details,
+                  errorHint: reserveError.hint,
+                })
                 if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
                   controller.enqueue(encoder.encode(
                     `data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.', code: 'NO_CREDITS' })}\n\n`
@@ -293,7 +300,7 @@ export async function POST(req: NextRequest) {
                 } else {
                   Sentry.captureException(new Error(reserveError.message), { tags: { source: 'reserve_credit' } })
                   controller.enqueue(encoder.encode(
-                    `data: ${JSON.stringify({ error: 'Unable to verify account status. Please try again.' })}\n\n`
+                    `data: ${JSON.stringify({ error: `Unable to verify account status: ${reserveError.message}` })}\n\n`
                   ))
                 }
                 return
@@ -360,6 +367,13 @@ export async function POST(req: NextRequest) {
             )
 
             if (reserveError) {
+              logger.error('[analyze] reserve_analysis_credit failed (fresh path)', {
+                userId: user.id,
+                errorMessage: reserveError.message,
+                errorCode: reserveError.code,
+                errorDetails: reserveError.details,
+                errorHint: reserveError.hint,
+              })
               if (reserveError.message?.includes('NO_CREDITS_REMAINING')) {
                 controller.enqueue(encoder.encode(
                   `data: ${JSON.stringify({ error: 'No credits remaining. Please upgrade your plan.', code: 'NO_CREDITS' })}\n\n`
@@ -367,7 +381,7 @@ export async function POST(req: NextRequest) {
               } else {
                 Sentry.captureException(new Error(reserveError.message), { tags: { source: 'reserve_credit' } })
                 controller.enqueue(encoder.encode(
-                  `data: ${JSON.stringify({ error: 'Unable to verify account status. Please try again.' })}\n\n`
+                  `data: ${JSON.stringify({ error: `Unable to verify account status: ${reserveError.message}` })}\n\n`
                 ))
               }
               return
