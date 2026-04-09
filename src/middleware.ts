@@ -34,7 +34,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com",
   "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://images.unsplash.com https://www.every-ai.com https://assets.aceternity.com https://github.com https://avatars.githubusercontent.com https://api.iconify.design https://unavatar.io https://www.google.com",
+  "img-src 'self' data: blob: https://images.unsplash.com https://www.every-ai.com https://assets.aceternity.com https://github.com https://avatars.githubusercontent.com https://api.iconify.design https://unavatar.io https://www.google.com https://*.gstatic.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://o4509996976242688.ingest.de.sentry.io https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://api.iconify.design",
   "font-src 'self'",
   "frame-src https://challenges.cloudflare.com",
