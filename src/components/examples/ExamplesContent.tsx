@@ -20,9 +20,9 @@ const EXAMPLES = [
     description: "Deep dive into the productivity space. How Notion maintains its edge against Obsidian and Roam Research.",
     metrics: ["Pricing Tiers", "Feature Velocity", "User Sentiment"],
     brands: [
-      { id: 1, name: "Notion", designation: "All-in-one workspace", image: "https://unavatar.io/notion.so" },
+      { id: 1, name: "Notion", designation: "All-in-one workspace", image: "https://www.google.com/s2/favicons?domain=notion.so&sz=128" },
       { id: 2, name: "n8n", designation: "Workflow Automation", image: "https://www.google.com/s2/favicons?domain=n8n.io&sz=128" },
-      { id: 3, name: "Microsoft", designation: "Enterprise Software", image: "https://unavatar.io/microsoft.com" }
+      { id: 3, name: "Microsoft", designation: "Enterprise Software", image: "https://www.google.com/s2/favicons?domain=microsoft.com&sz=128" }
     ],
     color: "#3b82f6"
   },
@@ -31,9 +31,9 @@ const EXAMPLES = [
     description: "Global sportswear giants analyzed. Market share shifts and direct-to-consumer strategy comparison.",
     metrics: ["Market Share", "Search Volume", "Ad Spend"],
     brands: [
-      { id: 4, name: "Google", designation: "Search & Advertising", image: "https://unavatar.io/google.com" },
-      { id: 5, name: "GitHub", designation: "Development Platform", image: "https://unavatar.io/github.com" },
-      { id: 6, name: "Reddit", designation: "Community Insights", image: "https://unavatar.io/reddit.com" }
+      { id: 4, name: "Google", designation: "Search & Advertising", image: "https://www.google.com/s2/favicons?domain=google.com&sz=128" },
+      { id: 5, name: "GitHub", designation: "Development Platform", image: "https://www.google.com/s2/favicons?domain=github.com&sz=128" },
+      { id: 6, name: "Reddit", designation: "Community Insights", image: "https://www.google.com/s2/favicons?domain=reddit.com&sz=128" }
     ],
     color: "#06b6d4"
   },
@@ -42,7 +42,7 @@ const EXAMPLES = [
     description: "Specialty coffee landscape in London. Identifying gaps in the high-end artisan market.",
     metrics: ["Location Density", "Review Ratings", "Foot Traffic"],
     brands: [
-      { id: 7, name: "OpenAI", designation: "Artificial Intelligence", image: "https://unavatar.io/openai.com" },
+      { id: 7, name: "OpenAI", designation: "Artificial Intelligence", image: "https://www.google.com/s2/favicons?domain=openai.com&sz=128" },
       { id: 8, name: "Slack", designation: "Team Communications", image: "https://www.google.com/s2/favicons?domain=slack.com&sz=128" },
       { id: 9, name: "n8n", designation: "Integration Engine", image: "https://www.google.com/s2/favicons?domain=n8n.io&sz=128" }
     ],
