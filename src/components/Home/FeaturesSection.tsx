@@ -7,7 +7,7 @@ import { EncryptedText } from '@/components/ui/aceternity/encrypted-text'
 import {
   Brain,
   Target,
-  BarChart3,
+  BarChart,
   Activity,
   FileText,
   Layers
@@ -32,7 +32,7 @@ const features = [
     title: 'Sentiment Intelligence',
     description:
       'Decode what users truly think about competing products through AI-driven sentiment analysis across reviews, forums, and social.',
-    icon: BarChart3,
+    icon: BarChart,
     accentColor: 'indigo'
   },
   {

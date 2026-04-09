@@ -2,7 +2,7 @@ import React from 'react'
 import { AnalysisReport, SubscriptionPlan } from '../../types'
 import {
   CheckCircle,
-  AlertTriangle,
+  TriangleAlert,
   Lightbulb,
   Link as LinkIcon,
   BarChart,
@@ -222,7 +222,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
 
           <div className='bg-red-50 dark:bg-red-950/20 rounded-3xl p-8 border border-red-100 dark:border-red-900/30'>
             <h2 className='text-lg font-bold text-red-900 dark:text-red-400 mb-2 flex items-center gap-2 uppercase tracking-tighter'>
-              <AlertTriangle className='w-4 h-4' />
+              <TriangleAlert className='w-4 h-4' />
               Strategic Risk (Red Flags)
             </h2>
             <p className='text-sm text-red-800/80 dark:text-red-300 font-medium leading-relaxed'>
