@@ -49,6 +49,15 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         setSessionUserId(session.user.id)
       }
     })
+
+    // Clear loading state when navigating back from external checkout (bfcache)
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setLoading(null)
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
   }, [])
 
   const handleUpgrade = async (

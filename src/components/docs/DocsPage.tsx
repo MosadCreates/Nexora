@@ -11,10 +11,10 @@ import {
   Info,
   Layers,
   Search,
-  CheckCircle2,
+  CheckCircle,
   TrendingUp,
   Cpu,
-  BarChart4,
+  BarChart,
   Network,
   Globe,
   Database,
@@ -96,15 +96,15 @@ const IntroductionDocs = () => (
         </p>
         <ul className="list-none space-y-3">
           <li className="flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-blue-500 mt-1 shrink-0" />
+            <CheckCircle className="w-5 h-5 text-blue-500 mt-1 shrink-0" />
             <span><strong>Strategic Scans:</strong> Advanced web-crawling that bypasses simple scraping to understand the *intent* behind competitor product updates.</span>
           </li>
           <li className="flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-blue-500 mt-1 shrink-0" />
+            <CheckCircle className="w-5 h-5 text-blue-500 mt-1 shrink-0" />
             <span><strong>Neural Clustering:</strong> Categorizing competitor weaknesses into actionable vectors like Pricing Arbitrage, Technical Debt, or Feature Fatigue.</span>
           </li>
           <li className="flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-blue-500 mt-1 shrink-0" />
+            <CheckCircle className="w-5 h-5 text-blue-500 mt-1 shrink-0" />
             <span><span><strong>Synthesis Index:</strong> A proprietary scoring system (0-100) that measures the operational threat of a competitor relative to your specific market position.</span></span>
           </li>
         </ul>
@@ -282,9 +282,9 @@ const MarketMappingDocs = () => (
           We aggregate customer sentiment across social signals and landing page reviews to create a heatmap of competitor perception. This allows you to identify where a competitor is vulnerable to a "Trust Attack."
         </p>
         <ul className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-          <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Identify "Vaporware" Claims</li>
-          <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Detect Pricing Discontent</li>
-          <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Locate Feature Fatigue</li>
+          <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500"/> Identify "Vaporware" Claims</li>
+          <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500"/> Detect Pricing Discontent</li>
+          <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500"/> Locate Feature Fatigue</li>
         </ul>
       </div>
       <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-10 flex items-center justify-center">

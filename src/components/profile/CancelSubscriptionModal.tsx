@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
+import { X, TriangleAlert, CheckCircle, CircleX } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import * as Sentry from '@sentry/nextjs'
 
@@ -116,7 +116,7 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
 
           <div className='flex items-start gap-4'>
             <div className='p-3 rounded-full bg-amber-100 dark:bg-amber-900/20'>
-              <AlertTriangle className='w-6 h-6 text-amber-600 dark:text-amber-400' />
+              <TriangleAlert className='w-6 h-6 text-amber-600 dark:text-amber-400' />
             </div>
             <div>
               <h2 className='text-xl font-bold text-neutral-900 dark:text-white'>
@@ -179,7 +179,7 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
           {status === 'success' && (
             <div className='py-8 text-center space-y-3'>
               <div className='inline-flex p-4 rounded-full bg-green-100 dark:bg-green-900/20'>
-                <CheckCircle2 className='w-8 h-8 text-green-600 dark:text-green-400' />
+                <CheckCircle className='w-8 h-8 text-green-600 dark:text-green-400' />
               </div>
               <div>
                 <h3 className='text-lg font-semibold text-neutral-900 dark:text-white'>
@@ -195,7 +195,7 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
           {status === 'error' && (
             <div className='py-6 space-y-4'>
               <div className='flex items-start gap-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800'>
-                <XCircle className='w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5' />
+                <CircleX className='w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5' />
                 <div>
                   <h3 className='text-sm font-semibold text-red-900 dark:text-red-100'>
                     Cancellation Failed

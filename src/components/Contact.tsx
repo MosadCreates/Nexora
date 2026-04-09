@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BackgroundBeams } from './ui/aceternity/background-beams'
-import { Linkedin, CheckCircle2 } from 'lucide-react'
+import { Linkedin, CheckCircle } from 'lucide-react'
 import { AnimatedTooltip } from '@/components/ui/aceternity/animated-tooltip'
 import * as Sentry from '@sentry/nextjs'
 
@@ -101,7 +101,7 @@ export const Contact = () => {
                 className='text-center py-12'
               >
                 <div className='w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6'>
-                  <CheckCircle2 className='w-10 h-10 text-green-600 dark:text-green-400' />
+                  <CheckCircle className='w-10 h-10 text-green-600 dark:text-green-400' />
                 </div>
                 <h2 className='text-3xl font-bold mb-4 text-black dark:text-white'>
                   Message Sent!

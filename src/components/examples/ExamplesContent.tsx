@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { AnimatedTooltip } from '@/components/ui/aceternity/animated-tooltip'
 import { TracingBeam } from '@/components/ui/aceternity/tracing-beam'
 import { motion } from 'framer-motion'
-import { Search, TrendingUp, Globe, ArrowRight, CheckCircle2, Shield, Zap, BarChart3 } from 'lucide-react'
+import { Search, TrendingUp, Globe, ArrowRight, CheckCircle, Shield, Zap, BarChart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -219,7 +219,7 @@ export default function ExamplesContent() {
                     <div className="space-y-3 mb-8">
                         {example.metrics.map(metric => (
                             <div key={metric} className="flex items-center gap-2 text-sm text-neutral-300">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                <CheckCircle className="w-4 h-4 text-emerald-500" />
                                 {metric}
                             </div>
                         ))}

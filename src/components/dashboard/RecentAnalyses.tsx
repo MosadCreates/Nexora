@@ -10,7 +10,7 @@ import {
   FileText,
   AlertCircle,
   Target,
-  BarChart3,
+  BarChart,
   Cpu,
   Fingerprint,
   Activity,
