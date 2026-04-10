@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { GridBackground } from '../ui/aceternity/background-grid'
-import { TrustedBy } from '../Home/TrustedBy'
 import { useRouter } from 'next/navigation'
 import { SubscriptionPlan } from '@/types'
 import * as Sentry from '@sentry/nextjs'
@@ -147,8 +146,8 @@ const PricingCards: React.FC<PricingCardsProps> = ({
     {
       id: 'starter',
       name: 'Starter',
-      monthlyPrice: '$49',
-      yearlyPrice: '$499',
+      monthlyPrice: '$19',
+      yearlyPrice: '$189',
       description: 'Ideal for small teams and emerging startups.',
       features: [
         'Everything in Hobby, plus',
@@ -164,8 +163,8 @@ const PricingCards: React.FC<PricingCardsProps> = ({
     {
       id: 'professional',
       name: 'Professional',
-      monthlyPrice: '$199',
-      yearlyPrice: '$1900',
+      monthlyPrice: '$49',
+      yearlyPrice: '$489',
       description: 'Advanced tools for serious competitive edges.',
       features: [
         'Everything in Starter, plus',
@@ -246,7 +245,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         <BackgroundBeams className='absolute inset-0 w-full h-full z-0' />
 
         {/* Header Section */}
-        <div className='relative w-full flex flex-col items-center justify-center py-10 md:pt-40 pb-10 z-20'>
+        <div className='relative w-full flex flex-col items-center justify-center py-10 pt-24 md:pt-40 pb-10 z-20'>
           <div className='px-4 text-center'>
             <h1 className='max-w-5xl mx-auto text-center tracking-tight font-medium text-black dark:text-white text-3xl md:text-5xl md:leading-tight'>
               Simple pricing for your ease
@@ -300,12 +299,12 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           </div>
         </div>
 
-        <div className='mx-auto mt-4 md:mt-8 grid relative z-20 grid-cols-1 gap-4 items-center md:grid-cols-2 xl:grid-cols-4 max-w-[1400px] px-4 pb-20'>
+        <div className='mx-auto mt-4 md:mt-8 grid relative z-20 grid-cols-1 gap-4 items-center sm:grid-cols-2 xl:grid-cols-4 max-w-[1400px] px-4 pb-20'>
           {plans.map((plan, idx) => (
             <div
               key={idx}
               className={cn(
-                'rounded-lg px-6 py-8 sm:mx-8 lg:mx-0 h-full flex flex-col justify-between',
+                'rounded-lg px-6 py-8 mx-0 h-full flex flex-col justify-between',
                 plan.highlight
                   ? 'relative bg-[radial-gradient(164.75%_100%_at_50%_0%,#334155_0%,#0F172A_48.73%)] shadow-2xl'
                   : 'bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800'
@@ -406,7 +405,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
       </GridBackground>
 
       {/* Feature Comparison Table */}
-      <div className='max-w-[1400px] mx-auto px-4 mt-20 mb-20 relative z-20 w-full overflow-x-auto'>
+      <div className='max-w-[1400px] mx-auto px-4 mt-20 mb-20 relative z-20 w-full overflow-x-auto hidden md:block'>
         <div className='inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8'>
           <table className='min-w-full divide-y divide-neutral-200 dark:divide-neutral-800'>
             <thead>
@@ -620,7 +619,6 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         </div>
       </div>
 
-      <TrustedBy />
     </div>
   )
 }

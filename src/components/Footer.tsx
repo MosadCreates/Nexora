@@ -7,7 +7,7 @@ import { Sparkles, ShieldCheck, Linkedin } from 'lucide-react'
 export function Footer () {
   return (
     <footer className='relative bg-white dark:bg-black overflow-hidden'>
-      <div className='border-t border-neutral-100 dark:border-neutral-800 px-8 pt-10 pb-16 relative z-10'>
+      <div className='border-t border-neutral-100 dark:border-neutral-800 px-4 md:px-8 pt-10 pb-16 relative z-10'>
         <div className='max-w-7xl mx-auto text-sm text-neutral-500 dark:text-neutral-400 flex sm:flex-row flex-col justify-between items-start'>
           <div className='flex flex-col'>
             <div className='mr-4 md:flex mb-4'>
@@ -36,7 +36,7 @@ export function Footer () {
             </div>
           </div>
 
-          <div className='grid grid-cols-2 md:grid-cols-3 gap-10 items-start mt-10 md:mt-0 w-full md:w-auto'>
+          <div className='grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-10 items-start mt-10 md:mt-0 w-full md:w-auto'>
             <div className='flex flex-col space-y-4'>
               <p className='font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2'>
                 Product
@@ -83,7 +83,7 @@ export function Footer () {
                 Refund Policy
               </Link>
             </div>
-            <div className='flex flex-col space-y-4'>
+            <div className='flex flex-col space-y-4 col-span-2 md:col-span-1'>
               <p className='font-bold text-black dark:text-white text-xs uppercase tracking-widest mb-2'>
                 Social
               </p>

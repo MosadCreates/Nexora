@@ -196,32 +196,42 @@ export const Contact = () => {
                 </form>
 
                 <div className='flex gap-6 mt-12 items-center justify-center md:justify-start'>
-                  <svg 
-                    viewBox="0 0 24 24" 
-                    className="w-5 h-5 text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors fill-current"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <a 
+                    href="https://x.com/NexoraI19729"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Follow Nexora on X (Twitter)"
                   >
-                    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.486 3.24H4.298l13.31 17.41z" />
-                  </svg>
-                  <svg 
-                    viewBox="-25.65 -42.75 222.3 256.5" 
-                    className="w-[30px] h-[30px] grayscale opacity-70 hover:grayscale-0 hover:opacity-100 cursor-pointer transition-all"
-                    xmlns="http://www.w3.org/2000/svg"
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      className="w-5 h-5 text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors fill-current"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.486 3.24H4.298l13.31 17.41z" />
+                    </svg>
+                  </a>
+                  <a 
+                    href="https://reddit.com/r/nexoraintel"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Join Nexora on Reddit"
                   >
-                    <g transform="translate(-85.4 -85.4)">
-                      <circle r="85.5" cy="170.9" cx="170.9" fill="#ff4500"/>
-                      <path d="M227.9 170.9c0-6.9-5.6-12.5-12.5-12.5-3.4 0-6.4 1.3-8.6 3.5-8.5-6.1-20.3-10.1-33.3-10.6l5.7-26.7 18.5 3.9c.2 4.7 4.1 8.5 8.9 8.5 4.9 0 8.9-4 8.9-8.9s-4-8.9-8.9-8.9c-3.5 0-6.5 2-7.9 5l-20.7-4.4c-.6-.1-1.2 0-1.7.3s-.8.8-1 1.4l-6.3 29.8c-13.3.4-25.2 4.3-33.8 10.6-2.2-2.1-5.3-3.5-8.6-3.5-6.9 0-12.5 5.6-12.5 12.5 0 5.1 3 9.4 7.4 11.4-.2 1.2-.3 2.5-.3 3.8 0 19.2 22.3 34.7 49.9 34.7 27.6 0 49.9-15.5 49.9-34.7 0-1.3-.1-2.5-.3-3.7 4.1-2 7.2-6.4 7.2-11.5zm-85.5 8.9c0-4.9 4-8.9 8.9-8.9s8.9 4 8.9 8.9-4 8.9-8.9 8.9-8.9-4-8.9-8.9zm49.7 23.5c-6.1 6.1-17.7 6.5-21.1 6.5-3.4 0-15.1-.5-21.1-6.5-.9-.9-.9-2.4 0-3.3.9-.9 2.4-.9 3.3 0 3.8 3.8 12 5.2 17.9 5.2 5.9 0 14-1.4 17.9-5.2.9-.9 2.4-.9 3.3 0 .7 1 .7 2.4-.2 3.3zm-1.6-14.6c-4.9 0-8.9-4-8.9-8.9s4-8.9 8.9-8.9 8.9 4 8.9 8.9-4 8.9-8.9 8.9z" fill="#fff"/>
-                    </g>
-                  </svg>
-                  <Linkedin className='w-5 h-5 text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors' />
-                  <svg 
-                    viewBox="0 0 24 24" 
-                    className="w-5 h-5 grayscale opacity-70 hover:grayscale-0 hover:opacity-100 cursor-pointer transition-all"
-                    xmlns="http://www.w3.org/2000/svg"
+                    <svg
+                      viewBox='0 0 24 24'
+                      className='w-5 h-5 text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors fill-current'
+                      xmlns='http://www.w3.org/2000/svg'
+                    >
+                      <path d='M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.688-.561-1.249-1.249-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z' />
+                    </svg>
+                  </a>
+                  <a 
+                    href="https://linkedin.com/company/nexoraintel"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Nexora on LinkedIn"
                   >
-                    <path fill="#E64A19" d="M13.546,9H10.8v3h2.746C14.349,12,15,11.328,15,10.5S14.349,9,13.546,9z"></path>
-                    <path fill="#E64A19" d="M12,0C5.372,0,0,5.372,0,12s5.372,12,12,12s12-5.372,12-12S18.628,0,12,0z M13.524,13.8H10.8v3H9V7.2h4.524c1.809,0,3.276,1.467,3.276,3.3C16.8,12.285,15.333,13.752,13.524,13.8z"></path>
-                  </svg>
+                    <Linkedin className='w-5 h-5 text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer transition-colors' />
+                  </a>
                 </div>
               </motion.div>
             )}

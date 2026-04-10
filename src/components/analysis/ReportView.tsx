@@ -24,9 +24,9 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
   }
 
   return (
-    <div className='max-w-6xl mx-auto pb-24 px-4 sm:px-6 lg:px-8 space-y-16 animate-in fade-in duration-1000'>
+    <div className='max-w-6xl mx-auto pb-24 px-4 sm:px-6 lg:px-8 space-y-10 md:space-y-16 animate-in fade-in duration-1000'>
       {/* Executive Summary */}
-      <section className='bg-white dark:bg-neutral-900 rounded-3xl p-10 shadow-2xl border border-neutral-100 dark:border-neutral-800 relative overflow-hidden'>
+      <section className='bg-white dark:bg-neutral-900 rounded-2xl md:rounded-3xl p-6 md:p-10 shadow-2xl border border-neutral-100 dark:border-neutral-800 relative overflow-hidden'>
         <div className='absolute top-0 right-0 p-8 opacity-5'>
           <BarChart className='w-32 h-32' />
         </div>
@@ -34,7 +34,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
           <CheckCircle className='w-4 h-4' />
           Executive Intelligence Summary
         </h2>
-        <p className='text-2xl text-neutral-800 dark:text-neutral-100 leading-relaxed font-semibold max-w-4xl'>
+        <p className='text-lg md:text-2xl text-neutral-800 dark:text-neutral-100 leading-relaxed font-semibold max-w-4xl'>
           {report.executiveSummary || 'Generating summary...'}
         </p>
       </section>
@@ -43,7 +43,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
       <section>
         <div className='flex items-center gap-4 mb-10'>
           <div className='h-10 w-1 bg-blue-500 rounded-full' />
-          <h2 className='text-3xl font-bold text-neutral-900 dark:text-white'>
+          <h2 className='text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white'>
             Competitive Weakness Matrix
           </h2>
         </div>
@@ -51,11 +51,11 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
           {report.weaknessMatrix?.map((w, idx) => (
             <div
               key={idx}
-              className='bg-white dark:bg-neutral-900 rounded-3xl p-8 shadow-xl border border-neutral-100 dark:border-neutral-800 transition-all hover:border-blue-500 dark:hover:border-blue-400 group'
+              className='bg-white dark:bg-neutral-900 rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl border border-neutral-100 dark:border-neutral-800 transition-all hover:border-blue-500 dark:hover:border-blue-400 group'
             >
               <div className='flex flex-wrap items-start justify-between gap-4 mb-8'>
                 <div className='flex-1'>
-                  <h3 className='text-2xl font-bold text-neutral-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>
+                  <h3 className='text-xl md:text-2xl font-bold text-neutral-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>
                     {w.name}
                   </h3>
                   <div className='flex flex-wrap gap-3'>
@@ -132,15 +132,15 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
       <section>
         <div className='flex items-center gap-4 mb-10'>
           <div className='h-10 w-1 bg-emerald-500 rounded-full' />
-          <h2 className='text-3xl font-bold text-neutral-900 dark:text-white'>
+          <h2 className='text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white'>
             Market Opportunity Ranking
           </h2>
         </div>
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6'>
           {report.comparisonTable?.map((row, idx) => (
             <div
               key={idx}
-              className='bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-6 shadow-xl relative overflow-hidden'
+              className='bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden'
             >
               <div className='absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-tighter'>
                 RANK #{idx + 1}
@@ -192,12 +192,12 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
 
       {/* Strategic Recommendations */}
       <section className='grid md:grid-cols-2 gap-8'>
-        <div className='bg-neutral-900 dark:bg-black text-white rounded-3xl p-10 shadow-2xl border border-neutral-800 flex flex-col justify-between group'>
+        <div className='bg-neutral-900 dark:bg-black text-white rounded-2xl md:rounded-3xl p-6 md:p-10 shadow-2xl border border-neutral-800 flex flex-col justify-between group'>
           <div>
             <div className='h-12 w-12 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-8 border border-blue-500/30'>
               <Lightbulb className='w-6 h-6 text-blue-400' />
             </div>
-            <h2 className='text-3xl font-bold mb-4 group-hover:text-blue-400 transition-colors tracking-tight'>
+            <h2 className='text-2xl md:text-3xl font-bold mb-4 group-hover:text-blue-400 transition-colors tracking-tight'>
               Strongest Opportunity
             </h2>
             <p className='text-lg leading-relaxed text-neutral-400 font-medium'>
@@ -233,14 +233,14 @@ const ReportView: React.FC<ReportViewProps> = ({ report, userPlan }) => {
       </section>
 
       {/* Validation Next Steps */}
-      <section className='bg-blue-600 dark:bg-blue-700 text-white rounded-[40px] p-12 shadow-2xl shadow-blue-500/20 relative overflow-hidden'>
+      <section className='bg-blue-600 dark:bg-blue-700 text-white rounded-[2rem] md:rounded-[40px] p-6 md:p-12 shadow-2xl shadow-blue-500/20 relative overflow-hidden'>
         <div className='absolute -bottom-10 -right-10 opacity-20'>
           <CheckCircle className='w-64 h-64 rotate-12' />
         </div>
-        <h2 className='text-3xl font-black mb-12 uppercase tracking-tighter'>
+        <h2 className='text-2xl md:text-3xl font-black mb-8 md:mb-12 uppercase tracking-tighter'>
           Validation Roadmap
         </h2>
-        <div className='grid md:grid-cols-3 gap-8 relative z-10'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 relative z-10'>
           {report.validationNextSteps?.map((step, i) => (
             <div
               key={i}

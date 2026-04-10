@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Footer } from "@/components/Footer";
-import { TrustedBy } from "@/components/Home/TrustedBy";
+
 import { FeaturesSection } from "@/components/Home/FeaturesSection";
 import { AnimatedTestimonialsDemo } from "@/components/Home/AnimatedTestimonialsDemo";
 import { HomePageInteractive, CTAInteractive } from "@/components/Home/HomePageInteractive";
@@ -12,7 +12,6 @@ export default function Home() {
         <HomePageInteractive />
       </Suspense>
       
-      <TrustedBy />
       
       <FeaturesSection />
       

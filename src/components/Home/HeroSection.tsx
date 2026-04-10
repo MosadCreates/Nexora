@@ -36,9 +36,9 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-8 tracking-tighter leading-tight"
+            className="text-3xl md:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-8 tracking-tighter leading-tight"
           >
-            The Market Has Already Told You <br />
+            The Market Has Already Told You <br className='hidden md:block' />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300">
               What to Build Next.
             </span>

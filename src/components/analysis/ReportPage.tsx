@@ -224,15 +224,16 @@ export const ReportPage: React.FC = () => {
       />
 
       {/* Fixed Bottom Right - New Analysis */}
-      <div className='fixed bottom-8 right-8 z-50'>
+      <div className='fixed bottom-4 right-4 md:bottom-8 md:right-8 z-50'>
         <div className='flex justify-center'>
           <NoiseBackground containerClassName='w-fit p-2 rounded-full mx-auto'>
             <button
               onClick={() => router.push('/analysis?new=true')}
-              className='h-full w-full cursor-pointer rounded-full bg-neutral-100 px-8 py-3 text-black shadow-[0px_2px_0px_0px_var(--color-neutral-50)_inset,0px_0.5px_1px_0px_var(--color-neutral-400)] transition-all duration-100 active:scale-98 dark:bg-neutral-900 dark:text-white dark:shadow-[0px_1px_0px_0px_var(--color-neutral-950)_inset,0px_1px_0px_0px_var(--color-neutral-800)] flex items-center gap-2 font-medium border border-neutral-200 dark:border-neutral-800'
+              className='h-full w-full cursor-pointer rounded-full bg-neutral-100 px-4 py-2.5 md:px-8 md:py-3 text-black shadow-[0px_2px_0px_0px_var(--color-neutral-50)_inset,0px_0.5px_1px_0px_var(--color-neutral-400)] transition-all duration-100 active:scale-98 dark:bg-neutral-900 dark:text-white dark:shadow-[0px_1px_0px_0px_var(--color-neutral-950)_inset,0px_1px_0px_0px_var(--color-neutral-800)] flex items-center gap-2 font-medium border border-neutral-200 dark:border-neutral-800 text-sm md:text-base'
             >
               <Sparkles className='w-4 h-4 text-blue-500' />
-              <span>Start New Research</span>
+              <span className='hidden sm:inline'>Start New Research</span>
+              <span className='sm:hidden'>New</span>
             </button>
           </NoiseBackground>
         </div>
@@ -267,7 +268,7 @@ export const ReportPage: React.FC = () => {
             {/* Main Intelligence Title */}
             <div className='space-y-4 max-w-4xl'>
               {query && (
-                <h2 className='text-4xl md:text-6xl font-bold text-black dark:text-white tracking-tight leading-[1.1]'>
+                <h2 className='text-2xl sm:text-4xl md:text-6xl font-bold text-black dark:text-white tracking-tight leading-[1.1] break-words'>
                   <EncryptedText text={query} className='bg-clip-text text-transparent bg-gradient-to-b from-black to-neutral-600 dark:from-white dark:to-neutral-500' />
                 </h2>
               )}
@@ -288,7 +289,7 @@ export const ReportPage: React.FC = () => {
                initial={{ opacity: 0, scale: 0.95 }}
                animate={{ opacity: 1, scale: 1 }}
                transition={{ delay: 0.2 }}
-               className='flex flex-wrap justify-center items-center gap-4 w-full pt-4'
+               className='flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 sm:gap-4 w-full pt-4'
             >
               {/* Primary Tab Toggle */}
               <div className='inline-flex bg-neutral-100/80 dark:bg-neutral-900/80 backdrop-blur-xl rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800 shadow-xl'>
@@ -324,7 +325,7 @@ export const ReportPage: React.FC = () => {
               </div>
 
               {/* Enhanced Export Menu */}
-              <div className='inline-flex items-center bg-white dark:bg-neutral-900 rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800 shadow-xl gap-1'>
+              <div className='inline-flex items-center bg-white dark:bg-neutral-900 rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800 shadow-xl gap-1 flex-wrap justify-center'>
                 {DOWNLOAD_FORMATS.map(format => {
                   const Icon = format.icon
                   const hasAccess = canAccess(currentPlan, format.minPlan)
@@ -366,7 +367,7 @@ export const ReportPage: React.FC = () => {
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                transition={{ delay: 0.8 }}
-               className='flex items-center gap-8 pt-6 border-t border-neutral-200/50 dark:border-neutral-800/50 w-full max-w-2xl justify-center'
+               className='flex flex-col sm:flex-row items-center gap-4 sm:gap-8 pt-6 border-t border-neutral-200/50 dark:border-neutral-800/50 w-full max-w-2xl justify-center'
             >
                <div className='flex flex-col items-center gap-1'>
                  <span className='text-[10px] font-black text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.2em]'>Reliability</span>
@@ -377,12 +378,12 @@ export const ReportPage: React.FC = () => {
                     <span className='text-xs font-bold text-neutral-700 dark:text-neutral-300'>High</span>
                  </div>
                </div>
-               <div className='w-px h-8 bg-neutral-200 dark:bg-neutral-800' />
+               <div className='hidden sm:block w-px h-8 bg-neutral-200 dark:bg-neutral-800' />
                <div className='flex flex-col items-center gap-1'>
                  <span className='text-[10px] font-black text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.2em]'>Vector Matches</span>
                  <span className='text-xs font-bold text-neutral-700 dark:text-neutral-300'>{report.sources?.length || 0} Grounding Nodes</span>
                </div>
-               <div className='w-px h-8 bg-neutral-200 dark:bg-neutral-800' />
+               <div className='hidden sm:block w-px h-8 bg-neutral-200 dark:bg-neutral-800' />
                <div className='flex flex-col items-center gap-1'>
                  <span className='text-[10px] font-black text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.2em]'>Format</span>
                  <span className='text-xs font-bold text-neutral-700 dark:text-neutral-300 tracking-tighter'>Deep Intel V2.4</span>

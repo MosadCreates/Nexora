@@ -140,14 +140,14 @@ export function RecentAnalyses ({
   }
 
   return (
-    <div data-tour="history-list" className='relative bg-white dark:bg-black py-24 min-h-[900px] overflow-hidden'>
+    <div data-tour="history-list" className='relative bg-white dark:bg-black py-12 md:py-24 min-h-[600px] md:min-h-[900px] overflow-hidden'>
       {/* Background Beams - Match DashboardHero */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
         <BackgroundBeams className='absolute inset-0 opacity-40' />
       </div>
 
       <div className='relative z-30 max-w-7xl mx-auto px-4'>
-        <div className='flex flex-col md:flex-row items-center justify-between mb-20 gap-8'>
+        <div className='flex flex-col items-center justify-between mb-12 md:mb-20 gap-6 md:gap-8'>
           <div className='space-y-4 text-center md:text-left'>
             <div className='inline-flex items-center space-x-3 bg-neutral-100 dark:bg-neutral-900 px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-800 transition-colors'>
               <Clock className='h-4 w-4 text-blue-500' />
@@ -155,7 +155,7 @@ export function RecentAnalyses ({
                 Live History
               </span>
             </div>
-            <h2 className='text-4xl md:text-6xl font-bold text-black dark:text-white tracking-tight'>
+            <h2 className='text-3xl md:text-6xl font-bold text-black dark:text-white tracking-tight'>
               Recent <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300'>Analyses</span>
             </h2>
             <div className='flex justify-center md:justify-start mt-2'>
@@ -168,7 +168,7 @@ export function RecentAnalyses ({
             </p>
           </div>
 
-          <div className='flex bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800 shadow-inner'>
+          <div className='flex flex-wrap justify-center bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800 shadow-inner gap-1'>
             <button
               onClick={() => setViewMode('memory')}
               className={cn(
@@ -211,10 +211,10 @@ export function RecentAnalyses ({
             "transition-all duration-700",
             viewMode === 'memory' ? "block" : "hidden"
           )}>
-            <DraggableCardContainer className='h-[650px] w-full border border-neutral-200 dark:border-neutral-800 rounded-[3rem] bg-neutral-100/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-2xl relative flex items-center justify-center overflow-visible'>
+            <DraggableCardContainer className='h-[450px] md:h-[650px] w-full border border-neutral-200 dark:border-neutral-800 rounded-[2rem] md:rounded-[3rem] bg-neutral-100/40 dark:bg-neutral-900/40 backdrop-blur-xl shadow-2xl relative flex items-center justify-center overflow-visible'>
               <div className='absolute inset-0 overflow-hidden pointer-events-none'>
                 <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center'>
-                  <p className='text-4xl md:text-8xl font-black text-neutral-200/50 dark:text-neutral-800/20 select-none tracking-tighter uppercase'>
+                  <p className='text-2xl md:text-8xl font-black text-neutral-200/50 dark:text-neutral-800/20 select-none tracking-tighter uppercase'>
                     Intelligence Archive
                   </p>
                 </div>

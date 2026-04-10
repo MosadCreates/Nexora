@@ -113,7 +113,7 @@ export default function ExamplesContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-8 tracking-tight">
+                <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-8 tracking-tight">
                     Intelligence in <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300">Action</span>
                 </h1>
                 <div className="max-w-2xl mx-auto">
@@ -165,7 +165,7 @@ export default function ExamplesContent() {
                                     <img
                                         src={item.image}
                                         alt={item.title}
-                                        className="relative rounded-xl border border-neutral-200 dark:border-neutral-800 w-full h-[400px] object-cover shadow-2xl"
+                                        className="relative rounded-xl border border-neutral-200 dark:border-neutral-800 w-full h-[250px] md:h-[400px] object-cover shadow-2xl"
                                     />
                                 )}
                             </div>
@@ -244,9 +244,9 @@ export default function ExamplesContent() {
       {/* Closing CTA - Requested Modern Design */}
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="relative isolate overflow-hidden bg-neutral-100 dark:bg-neutral-900/50 rounded-[3rem] border border-neutral-200 dark:border-neutral-800">
-          <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-6 py-16 md:flex-row md:px-12">
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between px-4 py-10 md:flex-row md:px-12 md:py-16 gap-8">
             <div className="flex flex-col">
-              <h2 className="mx-auto max-w-xl text-center text-3xl font-bold text-black md:mx-0 md:text-left md:text-5xl dark:text-white leading-tight">
+              <h2 className="mx-auto max-w-xl text-center text-2xl font-bold text-black md:mx-0 md:text-left md:text-5xl dark:text-white leading-tight">
                 Master your market with <br />
                 Nexora intelligence today.
               </h2>
@@ -255,8 +255,8 @@ export default function ExamplesContent() {
               </p>
               
               <div className="mt-10 mb-10 flex flex-col items-center md:items-start">
-                <div className="mb-2 flex flex-col sm:flex-row items-center justify-start lg:justify-start">
-                  <div className="mb-4 flex flex-row items-center sm:mb-0">
+                <div className="mb-2 flex flex-col items-center justify-start lg:justify-start gap-3">
+                  <div className="flex flex-row items-center">
                     <AnimatedTooltip 
                       isLogo={false}
                       items={[
@@ -270,7 +270,7 @@ export default function ExamplesContent() {
                     />
                   </div>
                   <motion.div 
-                    className="ml-6 flex justify-center"
+                    className="flex justify-center"
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
