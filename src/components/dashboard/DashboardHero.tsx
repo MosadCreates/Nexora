@@ -42,7 +42,7 @@ export const DashboardHero: React.FC = () => {
             initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: prefersReducedMotion ? 0 : 1, delay: prefersReducedMotion ? 0 : 0.6 }}
-            className="mt-32 grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-neutral-200 dark:border-neutral-800 pt-12"
+            className="mt-16 md:mt-32 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 border-t border-neutral-200 dark:border-neutral-800 pt-8 md:pt-12"
           >
             <div>
               <div className="text-3xl font-bold text-black dark:text-white mb-1">10M+</div>

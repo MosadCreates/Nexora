@@ -34,7 +34,7 @@ export const TourCard: React.FC<TourCardProps> = ({
         transition={{ duration: 0.2, ease: "easeOut" }}
         className="fixed z-[10000] bg-white dark:bg-neutral-900 
                    rounded-2xl shadow-2xl border border-neutral-200 
-                   dark:border-neutral-800 p-6 w-80 pointer-events-auto"
+                   dark:border-neutral-800 p-6 w-[calc(100vw-2rem)] sm:w-80 max-w-80 pointer-events-auto"
         style={{ top: cardY, left: cardX }}
       >
         {/* Header */}

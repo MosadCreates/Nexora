@@ -139,14 +139,14 @@ const Profile: React.FC = () => {
           </div>
 
           <div className='space-y-3'>
-            <div className='flex items-center justify-center gap-3'>
-              <h1 className='text-4xl md:text-5xl font-bold tracking-tight text-black dark:text-white'>
-                {fullName}
-              </h1>
-              <span className='px-3 py-1 rounded-md bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest text-neutral-500'>
-                {currentPlan} Plan
-              </span>
-            </div>
+             <div className='flex flex-col sm:flex-row items-center justify-center gap-3'>
+               <h1 className='text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-black dark:text-white text-center'>
+                 {fullName}
+               </h1>
+               <span className='px-3 py-1 rounded-md bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex-shrink-0'>
+                 {currentPlan} Plan
+               </span>
+             </div>
             <p className='text-neutral-500 dark:text-neutral-400 max-w-lg mx-auto leading-relaxed'>
               Intelligence Analyst specializing in market intelligence synthesis and neural-driven data extraction. 
               Allocating bandwidth for next-generation insights.
@@ -170,7 +170,7 @@ const Profile: React.FC = () => {
               >
                 <div className='rounded-3xl overflow-hidden border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-900/50 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-500/10'>
                   {/* Card Header (Illustration Area) */}
-                  <div className='aspect-[16/9] bg-white dark:bg-black/40 flex items-center justify-center p-10 relative overflow-hidden'>
+                  <div className='aspect-[4/3] sm:aspect-[16/9] bg-white dark:bg-black/40 flex items-center justify-center p-10 relative overflow-hidden'>
                     <div className='absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent'></div>
                     <div className='w-full space-y-4 relative z-10'>
                       <div className='flex justify-between items-end'>
@@ -213,7 +213,7 @@ const Profile: React.FC = () => {
               >
                 <div className='rounded-3xl overflow-hidden border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-zinc-900/50 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-purple-500/10'>
                   {/* Card Header (Illustration Area) */}
-                  <div className='aspect-[16/9] bg-white dark:bg-black/40 flex items-center justify-center p-10 relative overflow-hidden'>
+                  <div className='aspect-[4/3] sm:aspect-[16/9] bg-white dark:bg-black/40 flex items-center justify-center p-10 relative overflow-hidden'>
                     <div className='absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent'></div>
                     <div className='text-center space-y-2 relative z-10'>
                       <div className='w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 mx-auto border border-purple-500/20'>

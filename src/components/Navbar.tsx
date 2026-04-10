@@ -435,6 +435,18 @@ function Navbar ({
 
               <hr className='my-2 border-neutral-100 dark:border-neutral-800' />
 
+              {/* Theme Toggle for Mobile */}
+              <button
+                onClick={() => { toggleTheme(); setIsOpen(false); }}
+                className='text-sm font-medium p-3 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 flex items-center gap-2 w-full'
+              >
+                {theme === 'light' ? (
+                  <><Sun className='h-4 w-4' /> Light Mode</>
+                ) : (
+                  <><Moon className='h-4 w-4' /> Dark Mode</>
+                )}
+              </button>
+
               {!currentSession && (
                 <div className='grid grid-cols-2 gap-3 mt-2'>
                   <Link

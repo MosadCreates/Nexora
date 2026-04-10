@@ -337,7 +337,7 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className='md:h-screen md:overflow-hidden bg-white dark:bg-black flex pt-20'>
+    <div className='md:h-screen md:overflow-hidden bg-white dark:bg-black flex flex-col md:flex-row pt-20'>
       {/* Left Column - Login Form */}
       <div className='flex-1 flex items-center justify-center px-8 py-12 relative overflow-hidden md:h-full'>
         <BackgroundBeams className='absolute inset-0' />
