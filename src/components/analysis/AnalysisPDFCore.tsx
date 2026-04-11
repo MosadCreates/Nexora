@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 import {
   Document,
   Page,
@@ -7,19 +7,18 @@ import {
   StyleSheet,
   Svg,
   Path,
-  Circle,
-  Rect,
-} from '@react-pdf/renderer'
-import { AnalysisReport } from '../../types'
+  Circle
+} from '@react-pdf/renderer';
+import { AnalysisReport } from '../../types';
 
-// Modern Light SaaS Theme for clean, professional PDF printing/viewing
+// Premium Tech SaaS Theme
 const colors = {
   background: '#ffffff',
   surface: '#f8fafc', // slate-50
   surfaceLight: '#f1f5f9', // slate-100
-  primary: '#2563eb', // blue-600
-  secondary: '#3b82f6', // blue-500
-  accent: '#10b981', // emerald-500
+  primary: '#1e1b4b', // Deep Indigo
+  secondary: '#2563eb', // Electric Blue
+  accent: '#0ea5e9', // Sky blue
   warning: '#f59e0b', // amber-500
   critical: '#ef4444', // red-500
   text: '#0f172a', // slate-900
@@ -27,20 +26,21 @@ const colors = {
   textMuted: '#64748b', // slate-500
   border: '#e2e8f0', // slate-200
   divider: '#f1f5f9' // slate-100
-}
+};
 
+// Larger baseline fonts for Mobile View legibility (12pt base instead of 10pt)
 const styles = StyleSheet.create({
   page: {
-    padding: 50,
     paddingTop: 70,
     paddingBottom: 70,
+    paddingHorizontal: 40,
     backgroundColor: colors.background,
     fontFamily: 'Helvetica',
     color: colors.text
   },
   coverPage: {
     padding: 0,
-    backgroundColor: '#0a0a0a', // Keep cover dark and striking
+    backgroundColor: '#0f172a', // Deep elegant dark for cover to maintain impact
     color: '#ffffff',
     height: '100%',
     flexDirection: 'column',
@@ -53,138 +53,159 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   coverBrand: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: colors.secondary,
     letterSpacing: 3,
     textTransform: 'uppercase',
     marginBottom: 24,
     fontFamily: 'Helvetica-Bold'
   },
   coverTitle: {
-    fontSize: 36,
+    fontSize: 42,
     fontWeight: 'bold',
     marginBottom: 16,
     lineHeight: 1.2,
     fontFamily: 'Helvetica-Bold'
   },
   coverSubtitle: {
-    fontSize: 16,
-    color: '#a3a3a3',
+    fontSize: 18,
+    color: '#cbd5e1',
     marginBottom: 60,
     lineHeight: 1.4
   },
   coverInfoBlock: {
     marginTop: 40,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.secondary,
     paddingLeft: 24
   },
   coverInfoItem: {
     marginBottom: 16
   },
   coverInfoLabel: {
-    fontSize: 9,
-    color: '#737373',
+    fontSize: 10,
+    color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 4,
     fontFamily: 'Helvetica-Bold'
   },
   coverInfoValue: {
-    fontSize: 12,
-    color: '#e5e5e5',
+    fontSize: 14,
+    color: '#f8fafc',
     fontFamily: 'Helvetica-Bold'
   },
   header: {
     position: 'absolute',
-    top: 30,
-    left: 50,
-    right: 50,
+    top: 25,
+    left: 40,
+    right: 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 10
+    alignItems: 'center',
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.surfaceLight,
+    paddingBottom: 12
+  },
+  headerLogoGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  headerTitle: {
+    fontSize: 10,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    fontFamily: 'Helvetica-Bold'
+  },
+  headerSubtitle: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontFamily: 'Helvetica'
   },
   footer: {
     position: 'absolute',
-    bottom: 30,
-    left: 50,
-    right: 50,
+    bottom: 25,
+    left: 40,
+    right: 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 10
-  },
-  headerText: {
-    fontSize: 8,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontFamily: 'Helvetica-Bold'
+    borderTopWidth: 1.5,
+    borderTopColor: colors.surfaceLight,
+    paddingTop: 12
   },
   footerText: {
-    fontSize: 8,
+    fontSize: 9,
     color: colors.textMuted,
     letterSpacing: 0.5
   },
   section: {
-    marginBottom: 35
+    marginBottom: 30
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: colors.surfaceLight,
+    borderBottomColor: colors.primary, // Deep Indigo accent
     paddingBottom: 8
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.primary,
     fontFamily: 'Helvetica-Bold'
   },
   sectionNumber: {
-    fontSize: 14,
-    color: colors.primary,
-    marginRight: 10,
+    fontSize: 16,
+    color: colors.secondary,
+    marginRight: 12,
     fontFamily: 'Helvetica-Bold'
   },
   h3: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.primary,
     marginBottom: 8,
     fontFamily: 'Helvetica-Bold'
   },
   paragraph: {
-    fontSize: 10,
+    fontSize: 12, // Increased for mobile legibility
     lineHeight: 1.6,
     color: colors.textSecondary,
     marginBottom: 10
   },
   mono: {
     fontFamily: 'Courier',
-    fontSize: 9,
-    color: colors.primary
+    fontSize: 10,
+    color: colors.secondary
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderRadius: 10,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: colors.border,
+    shadowColor: '#000', // React PDF dropshadow support is limited, but keeping structured approach
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 }
+  },
+  gridRowAlt: {
+    backgroundColor: colors.surface
+  },
+  gridRowBase: {
+    backgroundColor: colors.background
   },
   highlightBox: {
-    backgroundColor: '#eff6ff', // blue-50
+    backgroundColor: '#eff6ff',
     borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+    borderLeftColor: colors.secondary,
     padding: 16,
-    borderRadius: 6,
+    borderRadius: 10,
     marginBottom: 20
   },
   row: {
@@ -197,76 +218,113 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
-    fontSize: 8,
-    color: colors.background,
+    borderRadius: 6,
+    fontSize: 9,
     fontFamily: 'Helvetica-Bold',
-    textTransform: 'uppercase'
+    textTransform: 'uppercase',
+    alignSelf: 'flex-start'
   },
   bulletItem: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
     paddingLeft: 4
   },
   bulletPoint: {
-    width: 12,
-    fontSize: 10,
-    color: colors.primary,
+    width: 16,
+    fontSize: 12,
+    color: colors.secondary,
     fontFamily: 'Helvetica-Bold'
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: 8
+  },
+  tableCol1: { width: '40%' },
+  tableCol2: { width: '40%' },
+  tableCol3: { width: '20%' },
+  tableHeaderText: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: colors.textMuted,
+    textTransform: 'uppercase'
   }
-})
+});
 
-// Visual Components
-const NeuralPattern = () => (
+// Minimalist Flat Vector Accent Logo
+const NexoraLogo = () => (
+  <Svg width="18" height="18" viewBox="0 0 24 24">
+    <Circle cx="12" cy="12" r="10" fill="none" stroke={colors.secondary} strokeWidth="2.5" />
+    <Path d="M12 6 L16 12 L12 18 L8 12 Z" fill={colors.primary} />
+    <Circle cx="12" cy="12" r="2.5" fill="#ffffff" />
+  </Svg>
+);
+
+const AbstractPatternCover = () => (
   <Svg
-    style={{ position: 'absolute', top: 0, right: 0, width: 400, height: 400, opacity: 0.1 }}
-    viewBox='0 0 400 400'
+    style={{ position: 'absolute', top: 0, right: 0, width: 500, height: 500, opacity: 0.15 }}
+    viewBox="0 0 400 400"
   >
-    <Circle cx='300' cy='100' r='3' fill={colors.primary} />
-    <Circle cx='350' cy='150' r='2' fill={colors.primary} />
-    <Circle cx='250' cy='180' r='3' fill={colors.accent} />
-    <Circle cx='320' cy='250' r='2' fill={colors.primary} />
+    <Circle cx="300" cy="100" r="4" fill={colors.secondary} />
+    <Circle cx="350" cy="150" r="2" fill={colors.secondary} />
+    <Circle cx="250" cy="180" r="6" fill={colors.accent} />
+    <Circle cx="320" cy="250" r="3" fill={colors.secondary} />
     <Path
-      d='M300 100 L350 150 M350 150 L250 180 M250 180 L320 250 M300 100 L250 180'
-      stroke={colors.primary}
-      strokeWidth='1'
+      d="M300 100 Q 320 120 350 150 T 250 180 T 320 250"
+      fill="none"
+      stroke={colors.secondary}
+      strokeWidth="2"
     />
   </Svg>
-)
+);
 
 interface AnalysisPDFProps {
-  report: AnalysisReport
-  query?: string
+  report: AnalysisReport;
+  query?: string;
 }
 
 const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intelligence' }) => {
-  const generatedDate = new Date().toLocaleDateString('en-US', {
-    month: 'long',
+  const generatedTimestamp = new Date().toLocaleString('en-US', {
+    month: 'short',
     day: 'numeric',
-    year: 'numeric'
-  })
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
 
   const renderBadge = (text: string, level: 'high' | 'medium' | 'low') => {
-    let bg = colors.textMuted
-    if (level === 'high') bg = colors.primary
-    if (level === 'medium') bg = colors.warning
-    if (level === 'low') bg = colors.textMuted
+    let bg = colors.surfaceLight;
+    let fg = colors.textMuted;
+    
+    if (level === 'high') {
+      bg = '#fee2e2'; // red-100
+      fg = colors.critical;
+    } else if (level === 'medium') {
+      bg = '#fef3c7'; // amber-100
+      fg = colors.warning;
+    } else if (level === 'low') {
+      bg = '#e0f2fe'; // sky-100
+      fg = colors.secondary;
+    }
+    
     return (
       <View style={[styles.badge, { backgroundColor: bg }]}>
-        <Text>{text}</Text>
+        <Text style={{ color: fg }}>{text}</Text>
       </View>
-    )
-  }
+    );
+  };
 
   return (
     <Document>
-      {/* 1. COVER PAGE - Dark theme for impact */}
-      <Page size='A4' style={styles.coverPage}>
-        <NeuralPattern />
+      <Page size="A4" style={styles.coverPage}>
+        <AbstractPatternCover />
         <View style={styles.coverContent}>
-          <Text style={styles.coverBrand}>Nexora Intelligence</Text>
-          <Text style={styles.coverTitle}>Competitive Intelligence Report</Text>
-          <Text style={styles.coverSubtitle}>Strategic Market Assessment</Text>
+          <Text style={styles.coverBrand}>Nexora OS</Text>
+          <Text style={styles.coverTitle}>Strategic Analysis Report</Text>
+          <Text style={styles.coverSubtitle}>Deep Context & Market Intelligence</Text>
 
           <View style={styles.coverInfoBlock}>
             <View style={styles.coverInfoItem}>
@@ -274,27 +332,31 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
               <Text style={styles.coverInfoValue}>{query}</Text>
             </View>
             <View style={styles.coverInfoItem}>
-              <Text style={styles.coverInfoLabel}>Date Generated</Text>
-              <Text style={styles.coverInfoValue}>{generatedDate}</Text>
+              <Text style={styles.coverInfoLabel}>Report Timestamp</Text>
+              <Text style={styles.coverInfoValue}>{generatedTimestamp}</Text>
             </View>
             <View style={styles.coverInfoItem}>
-              <Text style={styles.coverInfoLabel}>Analysis Engine</Text>
-              <Text style={styles.coverInfoValue}>Nexora AI Alpha</Text>
+              <Text style={styles.coverInfoLabel}>Generated By</Text>
+              <Text style={styles.coverInfoValue}>Nexora Primary Engine</Text>
             </View>
           </View>
         </View>
       </Page>
 
-      {/* 2. MAIN CONTENT - Flows continuously without forcing blank pages */}
-      <Page size='A4' style={styles.page} wrap={true}>
+      {/* Main Content Pages with dynamic wrapping */}
+      <Page size="A4" style={styles.page} wrap={true}>
         
-        {/* FIXED HEADER */}
+        {/* Abstract Header */}
         <View style={styles.header} fixed>
-          <Text style={styles.headerText}>Nexora Intelligence</Text>
-          <Text style={styles.headerText}>{query}</Text>
+          <View style={styles.headerLogoGroup}>
+            <NexoraLogo />
+            <Text style={styles.headerTitle}>NEXORA INTELLIGENCE</Text>
+          </View>
+          <Text style={styles.headerSubtitle}>{query}</Text>
         </View>
 
-        {/* EXECUTIVE SUMMARY */}
+        {/* Executive Summary */}
+        {/* wrap={false} here because Executive Summary is usually short enough to fit one page entirely */}
         <View style={styles.section} wrap={false}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionNumber}>01</Text>
@@ -309,11 +371,11 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
           <View style={styles.row}>
             <View style={[styles.card, styles.col]}>
               <Text style={styles.coverInfoLabel}>Market Signal</Text>
-              <Text style={[styles.h3, { color: colors.primary, marginBottom: 0 }]}>Strong</Text>
+              <Text style={[styles.h3, { color: colors.secondary, marginBottom: 0 }]}>Strong</Text>
             </View>
             <View style={[styles.card, styles.col]}>
               <Text style={styles.coverInfoLabel}>Growth Potential</Text>
-              <Text style={[styles.h3, { color: colors.accent, marginBottom: 0 }]}>High Expansion</Text>
+              <Text style={[styles.h3, { color: colors.primary, marginBottom: 0 }]}>High Expansion</Text>
             </View>
             <View style={[styles.card, styles.col]}>
               <Text style={styles.coverInfoLabel}>Risk Index</Text>
@@ -322,25 +384,27 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
           </View>
         </View>
 
-        {/* MARKET SIGNALS */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        {/* Market Signals - "Wall of Text" capable */}
+        {/* The section itself is wrap={true} so it breaks nicely. Indiv cards wrap={true} to handle walls of text */}
+        <View style={styles.section} wrap={true}>
+          <View style={styles.sectionHeader} wrap={false}>
             <Text style={styles.sectionNumber}>02</Text>
-            <Text style={styles.sectionTitle}>Market Signals & Weaknesses</Text>
+            <Text style={styles.sectionTitle}>Market Signals & Vulnerabilities</Text>
           </View>
 
           {report.weaknessMatrix.map((w, i) => (
-            <View key={i} style={styles.card} wrap={false}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={styles.h3}>{w.name}</Text>
+            <View key={i} style={[styles.card, { paddingVertical: 20 }]} wrap={true}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start' }}>
+                <Text style={[styles.h3, { flex: 1, paddingRight: 16 }]}>{w.name}</Text>
                 {renderBadge(
                   `${w.frequency} Signal`, 
                   w.frequency === 'High' ? 'high' : w.frequency === 'Medium' ? 'medium' : 'low'
                 )}
               </View>
+              {/* This text could be very long ("Wall of Text") - wrap=true on parent allows page breaks */}
               <Text style={styles.paragraph}>{w.monetizationSignals}</Text>
-              <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[styles.mono, { marginRight: 8 }]}>Pain Intensity:</Text>
+              <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceLight, padding: 8, borderRadius: 6 }}>
+                <Text style={[styles.mono, { marginRight: 8, color: colors.primary }]}>Pain Intensity:</Text>
                 <Text style={[styles.paragraph, { marginBottom: 0, fontWeight: 'bold', color: w.painIntensity === 'Severe' ? colors.critical : colors.warning }]}>
                   {w.painIntensity}
                 </Text>
@@ -349,32 +413,50 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
           ))}
         </View>
 
-        {/* OPPORTUNITY LANDSCAPE */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        {/* Opportunity Landscape Grid Table */}
+        <View style={styles.section} wrap={true}>
+          <View style={styles.sectionHeader} wrap={false}>
             <Text style={styles.sectionNumber}>03</Text>
             <Text style={styles.sectionTitle}>Opportunity Landscape</Text>
           </View>
 
-          {report.comparisonTable.map((row, i) => (
-            <View key={i} style={[styles.card, i === 0 ? { borderColor: colors.primary, backgroundColor: '#eff6ff' } : {}]} wrap={false}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={[styles.h3, i === 0 ? { color: colors.primary } : {}]}>
-                  {i === 0 ? '🏆 ' : ''}{row.weakness}
-                </Text>
-                <Text style={[styles.badge, { backgroundColor: colors.secondary, color: '#fff' }]}>
-                  Score: {row.opportunityScore}/5
-                </Text>
-              </View>
-              <Text style={styles.paragraph}>{row.whyBuildThis}</Text>
-              <View style={{ flexDirection: 'row', gap: 15, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <View style={styles.col}>
-                  <Text style={[styles.coverInfoLabel, { fontSize: 7 }]}>Moat Potential</Text>
-                  <Text style={styles.mono}>{row.moat}</Text>
+          <View style={[styles.card, { padding: 0, overflow: 'hidden' }]}>
+            {/* Table Header */}
+            <View style={[styles.row, { padding: 12, backgroundColor: colors.primary }]}>
+              <Text style={[styles.tableCol1, styles.tableHeaderText, { color: '#ffffff' }]}>Opportunity</Text>
+              <Text style={[styles.tableCol2, styles.tableHeaderText, { color: '#ffffff' }]}>Hypothesis</Text>
+              <Text style={[styles.tableCol3, styles.tableHeaderText, { color: '#ffffff', textAlign: 'right' }]}>Score / Moat</Text>
+            </View>
+            
+            {/* Table Rows */}
+            {report.comparisonTable.map((row, i) => (
+              <View 
+                key={i} 
+                style={[
+                  styles.row, 
+                  { padding: 12, borderTopWidth: 1, borderTopColor: colors.border },
+                  i % 2 === 0 ? styles.gridRowBase : styles.gridRowAlt
+                ]} 
+                wrap={true}
+              >
+                <View style={styles.tableCol1}>
+                  <Text style={[styles.h3, { fontSize: 12, marginBottom: 4 }]}>
+                    {i === 0 ? '★ ' : ''}{row.weakness}
+                  </Text>
+                </View>
+                <View style={styles.tableCol2}>
+                  <Text style={styles.paragraph}>{row.whyBuildThis}</Text>
+                </View>
+                <View style={[styles.tableCol3, { alignItems: 'flex-end' }]}>
+                  <View style={[styles.badge, { backgroundColor: colors.secondary, marginBottom: 8 }]}>
+                    <Text style={{ color: '#fff' }}>Score: {row.opportunityScore}/5</Text>
+                  </View>
+                  <Text style={[styles.coverInfoLabel, { fontSize: 8, marginBottom: 2 }]}>Moat</Text>
+                  <Text style={[styles.mono, { textAlign: 'right' }]}>{row.moat}</Text>
                 </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
 
         {/* AI STRATEGIC RECOMMENDATIONS */}
@@ -386,13 +468,13 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
 
           <View style={[styles.card, { borderLeftWidth: 4, borderLeftColor: colors.primary }]}>
             <Text style={styles.coverInfoLabel}>Primary Opportunity Vector</Text>
-            <Text style={[styles.paragraph, { color: colors.text, marginTop: 4 }]}>
+            <Text style={[styles.paragraph, { color: colors.text, marginTop: 4, fontWeight: 'bold' }]}>
               {report.strategicRecommendations.strongestOpportunity}
             </Text>
           </View>
           
           <View style={styles.row}>
-            <View style={[styles.card, styles.col, { borderLeftWidth: 4, borderLeftColor: colors.accent }]}>
+            <View style={[styles.card, styles.col, { borderLeftWidth: 4, borderLeftColor: colors.secondary }]}>
               <Text style={styles.coverInfoLabel}>Quick Win Alternative</Text>
               <Text style={[styles.paragraph, { marginTop: 4 }]}>
                 {report.strategicRecommendations.quickWinAlternative}
@@ -414,7 +496,7 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
             <Text style={styles.sectionTitle}>Actionable Next Steps</Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { padding: 20 }]}>
             {report.validationNextSteps.map((step, i) => (
               <View key={i} style={styles.bulletItem}>
                 <Text style={styles.bulletPoint}>{(i + 1).toString().padStart(2, '0')}.</Text>
@@ -424,16 +506,15 @@ const AnalysisPDF: React.FC<AnalysisPDFProps> = ({ report, query = 'Market Intel
           </View>
         </View>
 
-        {/* FIXED FOOTER */}
+        {/* Professional Timestamped Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>Nexora Intelligence Report</Text>
+          <Text style={styles.footerText}>Nexora OS: {generatedTimestamp}</Text>
           <Text style={styles.footerText} render={({ pageNumber, totalPages }) => (`Page ${pageNumber} of ${totalPages}`)} />
-          <Text style={styles.footerText}>Generated securely by AI</Text>
         </View>
 
       </Page>
     </Document>
-  )
-}
+  );
+};
 
-export default AnalysisPDF
+export default AnalysisPDF;
