@@ -19,7 +19,7 @@ import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { AnalyzePanel } from '@/components/dashboard/AnalyzePanel'
 import { RecentAnalyses } from '@/components/dashboard/RecentAnalyses'
 import { getPlanConfig } from '@/lib/planFeatures'
-import { AlertCircle, Search, RefreshCw, X } from 'lucide-react'
+import { AlertCircle, Search, RefreshCw, X, ArrowDown } from 'lucide-react'
 
 export const AnalysisPage: React.FC = () => {
   const { session, profile, loading: authLoading, fetchProfile } = useAuth()
@@ -28,12 +28,14 @@ export const AnalysisPage: React.FC = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   const analyzeSectionRef = useRef<HTMLDivElement>(null)
+  const streamEndRef = useRef<HTMLDivElement>(null)
 
   const [step, setStep] = useState<AnalysisStep>(AnalysisStep.IDLE)
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [report, setReport] = useState<AnalysisReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [streamedText, setStreamedText] = useState('')
+  const [showStreamBanner, setShowStreamBanner] = useState(true)
 
   // Fix #5: Post-checkout success UX
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
@@ -217,6 +219,7 @@ export const AnalysisPage: React.FC = () => {
     setQuery(queryText)
     setStep(AnalysisStep.RESEARCHING)
     setStreamedText('')
+    setShowStreamBanner(true)
     setError(null)
     setReport(null)
 
@@ -511,18 +514,56 @@ export const AnalysisPage: React.FC = () => {
       ) : (
         <div className='max-w-7xl mx-auto px-4 py-8 pt-24'>
           {step === AnalysisStep.RESEARCHING && streamedText && (
-            <div className='max-w-4xl mx-auto mb-8'>
-              <div className='bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6'>
-                <div className='flex items-center gap-2 mb-4'>
-                  <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
-                  <span className='text-sm text-neutral-500'>Analyzing {query}...</span>
+            <>
+              {showStreamBanner && (
+                <div className='max-w-4xl mx-auto mb-4 animate-in fade-in slide-in-from-top-2'>
+                  <div className='bg-blue-50/80 hover:bg-blue-50 dark:bg-blue-950/30 dark:hover:bg-blue-950/50 backdrop-blur-sm border border-blue-200/50 dark:border-blue-800/50 rounded-2xl p-4 flex items-start sm:items-center justify-between shadow-sm transition-colors'>
+                    <div className='flex items-start sm:items-center gap-4'>
+                      <div className='w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0'>
+                        <div className='w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse' />
+                      </div>
+                      <div>
+                        <h4 className='text-blue-900 dark:text-blue-100 font-semibold text-sm mb-0.5'>
+                          Generating Intelligence Report
+                        </h4>
+                        <p className='text-blue-700 dark:text-blue-300 text-sm leading-relaxed max-w-2xl'>
+                          Please wait while our AI engines compile your comprehensive analysis. Your report will be ready momentarily.
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowStreamBanner(false)} 
+                      className='text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200 p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex-shrink-0'
+                      title="Dismiss"
+                    >
+                      <X className='w-4 h-4' />
+                    </button>
+                  </div>
                 </div>
-                <p className='text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-mono whitespace-pre-wrap'>
-                  {streamedText}
-                  <span className='inline-block w-2 h-4 bg-neutral-400 animate-pulse ml-1' />
-                </p>
+              )}
+              
+              <div className='max-w-4xl mx-auto mb-8 relative'>
+                <div className='bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-sm'>
+                  <div className='flex items-center gap-2 mb-4'>
+                    <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
+                    <span className='text-sm font-medium text-neutral-500'>Analyzing {query}...</span>
+                  </div>
+                  <p className='text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-mono whitespace-pre-wrap overflow-hidden'>
+                    {streamedText}
+                    <span className='inline-block w-2 h-4 bg-neutral-400 animate-pulse ml-1 align-middle' />
+                  </p>
+                  <div ref={streamEndRef} className="h-4" />
+                </div>
               </div>
-            </div>
+
+              <button
+                onClick={() => streamEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })}
+                className='fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md text-neutral-700 dark:text-neutral-200 p-3.5 rounded-full shadow-xl border border-neutral-200 dark:border-neutral-700 hover:scale-105 hover:bg-white dark:hover:bg-neutral-800 active:scale-95 transition-all z-50 flex items-center justify-center animate-bounce group'
+                title="Scroll to bottom"
+              >
+                <ArrowDown className="w-5 h-5 text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-neutral-100 transition-colors" />
+              </button>
+            </>
           )}
           
           {(step === AnalysisStep.RESEARCHING && !streamedText ||
