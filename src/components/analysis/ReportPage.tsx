@@ -8,7 +8,6 @@ import { supabase } from '../../lib/supabase'
 import { NavbarDemo } from '../Navbar'
 import { LoaderTwo } from '../ui/loader'
 import ReportView from './ReportView'
-import { NoiseBackground } from '../ui/noise-background'
 import {
   Sparkles,
   FileText,
@@ -226,7 +225,6 @@ export const ReportPage: React.FC = () => {
       {/* Fixed Bottom Right - New Analysis */}
       <div className='fixed bottom-4 right-4 md:bottom-8 md:right-8 z-50'>
         <div className='flex justify-center'>
-          <NoiseBackground containerClassName='w-fit p-2 rounded-full mx-auto'>
             <button
               onClick={() => router.push('/analysis?new=true')}
               className='h-full w-full cursor-pointer rounded-full bg-neutral-100 px-4 py-2.5 md:px-8 md:py-3 text-black shadow-[0px_2px_0px_0px_var(--color-neutral-50)_inset,0px_0.5px_1px_0px_var(--color-neutral-400)] transition-all duration-100 active:scale-98 dark:bg-neutral-900 dark:text-white dark:shadow-[0px_1px_0px_0px_var(--color-neutral-950)_inset,0px_1px_0px_0px_var(--color-neutral-800)] flex items-center gap-2 font-medium border border-neutral-200 dark:border-neutral-800 text-sm md:text-base'
@@ -235,7 +233,6 @@ export const ReportPage: React.FC = () => {
               <span className='hidden sm:inline'>Start New Research</span>
               <span className='sm:hidden'>New</span>
             </button>
-          </NoiseBackground>
         </div>
       </div>
 
