@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/nextjs'
 import { createBrowserClient } from '@supabase/ssr'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, X } from 'lucide-react'
+import { AnnualBanner } from '@/components/pricing/AnnualBanner'
 
 interface PricingCardsProps {
   currentPlan?: SubscriptionPlan
@@ -132,71 +133,85 @@ const PricingCards: React.FC<PricingCardsProps> = ({
       name: 'Hobby',
       monthlyPrice: '$0',
       yearlyPrice: '$0',
-      description: 'Perfect for exploring the power of market intelligence.',
+      yearlyMonthlyEquivalent: '$0',
+      yearlySavings: 0,
+      yearlyTotal: '$0',
+      description: 'Perfect for exploring competitor intelligence.',
       features: [
-        '3 competitive scans per month',
-        'Basic sentiment analysis',
-        'Email alerts for top shifts',
-        'Community forum access',
-        'Nexora monthly digest'
+        '3 analyses per month',
+        'Full AI intelligence reports',
+        'Export as PDF, JSON, CSV',
+        'Analysis history saved',
+        'Email support',
       ],
-      buttonText: 'Get Started',
-      highlight: false
+      buttonText: 'Get Started Free',
+      highlight: false,
+      badge: null,
     },
     {
       id: 'starter',
       name: 'Starter',
-      monthlyPrice: '$19',
-      yearlyPrice: '$189',
-      description: 'Ideal for small teams and emerging startups.',
+      monthlyPrice: '$19',      // ← Early bird price
+      yearlyPrice: '$189',       // ← Annual total
+      yearlyMonthlyEquivalent: '$15.75', // ← Per month
+      yearlySavings: 39,         // ← Annual savings vs monthly
+      yearlyTotal: '$189',
+      description: 'For founders and small teams.',
       features: [
         'Everything in Hobby, plus',
-        '20 competitive scans per month',
-        'Deep sentiment synthesis',
-        'Real-time market drift alerts',
-        'Exportable strategy reports',
-        'Standard API access'
+        '20 analyses per month',
+        'Competitor weakness matrix',
+        'Market gap analysis',
+        'Strategic recommendations',
+        'Priority email support',
       ],
-      buttonText: 'Start Trial',
-      highlight: false
+      buttonText: 'Start Free Trial',
+      highlight: false,
+      badge: '🔥 Early Bird',
     },
     {
       id: 'professional',
       name: 'Professional',
       monthlyPrice: '$49',
       yearlyPrice: '$489',
-      description: 'Advanced tools for serious competitive edges.',
+      yearlyMonthlyEquivalent: '$40.75',
+      yearlySavings: 99,
+      yearlyTotal: '$489',
+      description: 'For serious competitive advantage.',
       features: [
         'Everything in Starter, plus',
-        '60 competitive scans per month',
-        'Automated Strategic Mapping',
-        'Proprietary Foresight Engine',
+        '60 analyses per month',
+        'Advanced strategic mapping',
         'Custom dashboard views',
         'Priority 24/7 support',
-        'Dedicated account manager'
+        'Team sharing (coming soon)',
       ],
-      buttonText: 'Go Pro',
-      highlight: true
+      buttonText: 'Go Professional',
+      highlight: true,
+      badge: '⭐ Most Popular',
     },
     {
       id: 'enterprise',
       name: 'Enterprise',
       monthlyPrice: 'Custom',
       yearlyPrice: 'Custom',
-      description: 'Full-scale intelligence for large organizations.',
+      yearlyMonthlyEquivalent: 'Custom',
+      yearlySavings: 0,
+      yearlyTotal: 'Custom',
+      description: 'For large organizations and agencies.',
       features: [
         'Everything in Professional, plus',
-        'Custom LLM training on your data',
-        'On-prem deployment options',
-        'SLA & Security guarantees',
-        'Custom team capacity',
-        'Dedicated analyst support',
-        'Personalized market insights'
+        'Unlimited analyses',
+        'Custom AI training',
+        'SLA guarantee',
+        'Dedicated account manager',
+        'Custom integrations',
       ],
       buttonText: 'Contact Sales',
       highlight: false,
-      priceCustom: true
-    }
+      badge: null,
+      priceCustom: true,
+    },
   ]
 
   return (
@@ -246,6 +261,9 @@ const PricingCards: React.FC<PricingCardsProps> = ({
 
         {/* Header Section */}
         <div className='relative w-full flex flex-col items-center justify-center py-10 pt-24 md:pt-40 pb-10 z-20'>
+          <div className="w-full max-w-5xl mx-auto px-4 z-50">
+            <AnnualBanner />
+          </div>
           <div className='px-4 text-center'>
             <h1 className='max-w-5xl mx-auto text-center tracking-tight font-medium text-black dark:text-white text-3xl md:text-5xl md:leading-tight'>
               Simple pricing for your ease
@@ -266,36 +284,58 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             </h2>
           </div>
 
-          {/* New Toggle Structure from HTML */}
-          <div className='flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 w-fit mx-auto mt-14 mb-4 rounded-md overflow-hidden relative'>
-            <button
-              onClick={() => setBillPlan('monthly')}
-              className={cn(
-                'text-sm font-medium p-4 rounded-md relative transition-all duration-200',
-                billPlan === 'monthly'
-                  ? 'text-white dark:text-black'
-                  : 'text-gray-500 dark:text-muted-dark'
-              )}
-            >
-              {billPlan === 'monthly' && (
-                <span className='absolute inset-0 bg-black dark:bg-white'></span>
-              )}
-              <span className='relative z-10'>Monthly</span>
-            </button>
-            <button
-              onClick={() => setBillPlan('yearly')}
-              className={cn(
-                'text-sm font-medium p-4 rounded-md relative transition-all duration-200',
-                billPlan === 'yearly'
-                  ? 'text-white dark:text-black'
-                  : 'text-gray-500 dark:text-muted-dark'
-              )}
-            >
+          {/* Billing Toggle */}
+          <div className="flex flex-col items-center gap-3 mt-14 mb-8">
+            <div className="flex items-center gap-3 bg-neutral-100 
+                            dark:bg-neutral-800 p-1 rounded-xl">
+              <button
+                onClick={() => setBillPlan('monthly')}
+                className={cn(
+                  'px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                  billPlan === 'monthly'
+                    ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm'
+                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700'
+                )}
+              >
+                Monthly
+              </button>
+              
+              <button
+                onClick={() => setBillPlan('yearly')}
+                className={cn(
+                  'px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2',
+                  billPlan === 'yearly'
+                    ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm'
+                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700'
+                )}
+              >
+                Annual
+                <span className={cn(
+                  'text-xs font-bold px-2 py-0.5 rounded-full transition-all',
+                  billPlan === 'yearly'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                )}>
+                  2 months free
+                </span>
+              </button>
+            </div>
+            
+            {/* Savings callout — only shows when annual is selected */}
+            <AnimatePresence>
               {billPlan === 'yearly' && (
-                <span className='absolute inset-0 bg-black dark:bg-white'></span>
+                <motion.p
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm text-green-600 dark:text-green-400 
+                             font-medium"
+                >
+                  🎉 You save up to $99/year on the Professional plan
+                </motion.p>
               )}
-              <span className='relative z-10'>Yearly</span>
-            </button>
+            </AnimatePresence>
           </div>
         </div>
 
@@ -311,36 +351,83 @@ const PricingCards: React.FC<PricingCardsProps> = ({
               )}
             >
               <div className=''>
-                <h3
-                  id={`tier-${plan.id}`}
-                  className={cn(
-                    'text-base font-semibold leading-7',
-                    plan.highlight
-                      ? 'text-white'
-                      : 'text-muted dark:text-muted-dark'
-                  )}
-                >
-                  {plan.name}
-                </h3>
-                <p className='mt-4'>
-                  <span
+                <div className="flex items-center justify-between">
+                  <h3
+                    id={`tier-${plan.id}`}
                     className={cn(
-                      'text-4xl font-bold tracking-tight inline-block',
+                      'text-base font-semibold leading-7',
                       plan.highlight
                         ? 'text-white'
-                        : 'text-neutral-900 dark:text-neutral-200'
+                        : 'text-muted dark:text-muted-dark'
                     )}
                   >
-                    {billPlan === 'monthly'
-                      ? plan.monthlyPrice
-                      : plan.yearlyPrice}
-                    {!plan.priceCustom && (
-                      <span className='text-sm font-normal'>
-                        /{billPlan === 'monthly' ? 'mo' : 'yr'}
+                    {plan.name}
+                  </h3>
+                  {plan.badge && (
+                    <span className={cn(
+                      "text-xs font-bold px-2.5 py-0.5 rounded-full inline-flex items-center",
+                      plan.highlight 
+                        ? "bg-white text-black" 
+                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700"
+                    )}>
+                      {plan.badge}
+                    </span>
+                  )}
+                </div>
+                
+                <div className="mt-4">
+                  {billPlan === 'yearly' && plan.yearlySavings > 0 ? (
+                    <div>
+                      {/* Annual savings badge */}
+                      <div className="inline-flex items-center gap-1.5 
+                                      bg-green-100 dark:bg-green-900/30 
+                                      text-green-700 dark:text-green-400 
+                                      text-xs font-bold px-2.5 py-1 rounded-full mb-3">
+                        <span>✓</span>
+                        <span>Save ${plan.yearlySavings}/year</span>
+                      </div>
+                      
+                      {/* Main price - annual total */}
+                      <div className="flex items-end gap-1">
+                        <span className={cn(
+                          'text-4xl font-bold tracking-tight inline-block',
+                          plan.highlight
+                            ? 'text-white'
+                            : 'text-neutral-900 dark:text-neutral-200'
+                        )}>
+                          {plan.yearlyPrice}
+                        </span>
+                        <span className="text-sm font-normal mb-1.5 opacity-70">/year</span>
+                      </div>
+                      
+                      {/* Per month breakdown */}
+                      <p className={cn("text-sm mt-1", plan.highlight ? "text-neutral-300" : "text-neutral-500 dark:text-neutral-400")}>
+                        {plan.yearlyMonthlyEquivalent}/mo · billed annually
+                      </p>
+                      
+                      {/* Original price strikethrough */}
+                      <p className={cn("text-xs mt-0.5 line-through", plan.highlight ? "text-neutral-400" : "text-neutral-400")}>
+                        {plan.monthlyPrice}/mo if billed monthly
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 pt-10">
+                      <span
+                        className={cn(
+                          'text-4xl font-bold tracking-tight inline-block',
+                          plan.highlight
+                            ? 'text-white'
+                            : 'text-neutral-900 dark:text-neutral-200'
+                        )}
+                      >
+                        {plan.monthlyPrice}
+                        {!plan.priceCustom && (
+                          <span className='text-sm font-normal opacity-70'>/mo</span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                </p>
+                    </div>
+                  )}
+                </div>
                 <p
                   className={cn(
                     'mt-6 text-sm leading-7 h-12 md:h-12 xl:h-12',
