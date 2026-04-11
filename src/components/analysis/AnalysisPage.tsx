@@ -36,6 +36,31 @@ export const AnalysisPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [streamedText, setStreamedText] = useState('')
   const [showStreamBanner, setShowStreamBanner] = useState(true)
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false)
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (isAutoScrolling && streamEndRef.current) {
+      streamEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
+  }, [streamedText, isAutoScrolling])
+
+  // Cancel auto-scroll on manual scroll interference
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isAutoScrolling) {
+        setIsAutoScrolling(false)
+      }
+    }
+    // Listen for manual ways the user scrolls to disable auto-scrolling
+    window.addEventListener('wheel', handleScroll, { passive: true })
+    window.addEventListener('touchmove', handleScroll, { passive: true })
+    
+    return () => {
+      window.removeEventListener('wheel', handleScroll)
+      window.removeEventListener('touchmove', handleScroll)
+    }
+  }, [isAutoScrolling])
 
   // Fix #5: Post-checkout success UX
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
@@ -220,6 +245,7 @@ export const AnalysisPage: React.FC = () => {
     setStep(AnalysisStep.RESEARCHING)
     setStreamedText('')
     setShowStreamBanner(true)
+    setIsAutoScrolling(false)
     setError(null)
     setReport(null)
 
@@ -556,13 +582,18 @@ export const AnalysisPage: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => streamEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })}
-                className='fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md text-neutral-700 dark:text-neutral-200 p-3.5 rounded-full shadow-xl border border-neutral-200 dark:border-neutral-700 hover:scale-105 hover:bg-white dark:hover:bg-neutral-800 active:scale-95 transition-all z-50 flex items-center justify-center animate-bounce group'
-                title="Scroll to bottom"
-              >
-                <ArrowDown className="w-5 h-5 text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-neutral-100 transition-colors" />
-              </button>
+              {!isAutoScrolling && (
+                <button
+                  onClick={() => {
+                    setIsAutoScrolling(true)
+                    streamEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                  }}
+                  className='fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-md text-neutral-700 dark:text-neutral-200 p-3.5 rounded-full shadow-xl border border-neutral-200 dark:border-neutral-700 hover:scale-105 hover:bg-white dark:hover:bg-neutral-800 active:scale-95 transition-all z-50 flex items-center justify-center animate-bounce group'
+                  title="Scroll to bottom"
+                >
+                  <ArrowDown className="w-5 h-5 text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-neutral-100 transition-colors" />
+                </button>
+              )}
             </>
           )}
           
