@@ -22,7 +22,7 @@ export function ExampleBentoGrid () {
     {
       title: 'Real User Feedback',
       description:
-        'Analyze complaints from Reddit, G2, Capterra, and more to find real pain points.',
+        'Analyze complaints from G2, Capterra, and more to find real pain points.',
       icon: <IconMessageChatbot className='h-8 w-8 text-purple-500' />
     },
     {
