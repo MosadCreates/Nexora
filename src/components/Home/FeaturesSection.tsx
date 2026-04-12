@@ -17,21 +17,21 @@ const features = [
   {
     title: 'AI-Powered Deep Research',
     description:
-      "Analyze thousands of data points to uncover your competitors' hidden weaknesses and untapped opportunities — instantly.",
+      "Instantly uncover competitor weaknesses and market opportunities using thousands of AI-analyzed data points.",
     icon: Brain,
     accentColor: 'blue'
   },
   {
     title: 'Competitive Gap Analysis',
     description:
-      'Identify market gaps your competitors have overlooked, with prioritized opportunity scoring backed by real user feedback.',
+      'Identify overlooked market gaps with prioritized opportunity scoring based on real user feedback.',
     icon: Target,
     accentColor: 'cyan'
   },
   {
     title: 'Sentiment Intelligence',
     description:
-      'Decode what users truly think about competing products through AI-driven sentiment analysis across reviews, forums, and social.',
+      'Understand user sentiment across reviews and forums through AI-driven intelligence.',
     icon: BarChart,
     accentColor: 'indigo'
   },

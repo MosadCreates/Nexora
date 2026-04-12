@@ -12,15 +12,22 @@ import { TourOverlay } from '@/components/onboarding/TourOverlay'
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
+export const viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata: Metadata = {
   title: {
-    default: "Nexora | AI Competitor Analysis & Market Intelligence",
+    default: "Nexora | Elite AI Competitor Analysis & Market Intelligence",
     template: "%s | Nexora",
   },
-  description: "Nexora uses advanced artificial intelligence to analyze market shifts, competitor movements, and emerging trends.",
+  description: "Nexora provides industry-leading AI competitor analysis to help you uncover market gaps, track competitor moves, and build better products with absolute confidence.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraintel.com'),
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraintel.com',
+    canonical: '/',
   },
   verification: {
     google: '6BXhz6AmCs1B0bFsQKAu4qSR74KN6LH4_vDaSMHyIT4', // just the content value, not the full tag
@@ -29,8 +36,8 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Nexora | See what's next in your market",
-    description: "AI-powered competitor analysis that uncovers weaknesses and market opportunities.",
+    title: "Nexora | AI Competitor Analysis & Market Intelligence",
+    description: "Master your market with AI competitor analysis. Uncover hidden opportunities and outpace your competition.",
     url: '/',
     siteName: 'Nexora',
     images: [
@@ -38,7 +45,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Nexora — AI Competitor Intelligence',
+        alt: 'Nexora AI Competitor Analysis',
       },
     ],
     locale: 'en_US',
@@ -46,23 +53,27 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Nexora | See what's next in your market",
+    title: "Nexora | AI Competitor Analysis & Market Intelligence",
     description: "AI-powered competitor analysis that uncovers weaknesses and market opportunities.",
     images: ['/og-image.png'],
   },
   icons: {
     icon: [
-      { url: '/favicon.ico' },
+      { url: '/favicon.ico', rel: 'icon' },
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' }
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/apple-touch-icon.png', sizes: '48x48', type: 'image/png' },
+      { url: '/apple-touch-icon.png', sizes: '96x96', type: 'image/png' },
+      { url: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
     ],
+    shortcut: ['/favicon.ico'],
     apple: [
-      { url: '/apple-touch-icon.png' }
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
     ],
     other: [
       {
         rel: 'apple-touch-icon-precomposed',
-        url: '/apple-touch-icon-precomposed.png',
+        url: '/apple-touch-icon.png',
       },
     ],
   },
@@ -77,7 +88,7 @@ function StructuredData() {
     '@type': 'Organization',
     name: 'Nexora',
     url: baseUrl,
-    logo: `${baseUrl}/og-image.png`,
+    logo: `${baseUrl}/apple-touch-icon.png`,
     sameAs: [
       // Add social URLs when available
     ],

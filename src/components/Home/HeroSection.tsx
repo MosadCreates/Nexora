@@ -14,7 +14,7 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
-  const words = `Analyze any product and discover untapped business opportunities backed by real user feedback from across the web.`
+  const words = `Analyze any product and discover untapped business opportunities with our advanced AI competitor analysis platform, backed by real user feedback from across the web.`
 
   return (
     <div className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden min-h-screen flex flex-col items-center justify-center">
@@ -38,9 +38,9 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-3xl md:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-8 tracking-tighter leading-tight"
           >
-            The Market Has Already Told You <br className='hidden md:block' />
+            Elite AI Competitor Analysis <br className='hidden md:block' />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300">
-              What to Build Next.
+              For Data-Driven Teams.
             </span>
           </motion.h1>
 
@@ -78,7 +78,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             <div className="p-2 bg-white dark:bg-black dark:border-neutral-700 border border-neutral-200 rounded-[24px] overflow-hidden">
               <Image 
                 src="/header.webp"
-                alt="Market Intelligence Dashboard" 
+                alt="Nexora AI Competitor Analysis Dashboard" 
                 priority
                 width={1920} 
                 height={1080} 
