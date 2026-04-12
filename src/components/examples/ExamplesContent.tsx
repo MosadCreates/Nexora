@@ -33,7 +33,7 @@ const EXAMPLES = [
     brands: [
       { id: 4, name: "Google", designation: "Search & Advertising", image: "https://www.google.com/s2/favicons?domain=google.com&sz=128" },
       { id: 5, name: "GitHub", designation: "Development Platform", image: "https://www.google.com/s2/favicons?domain=github.com&sz=128" },
-      { id: 6, name: "Reddit", designation: "Community Insights", image: "https://www.google.com/s2/favicons?domain=reddit.com&sz=128" }
+
     ],
     color: "#06b6d4"
   },
@@ -72,7 +72,7 @@ const TRACING_CONTENT = [
     description: (
       <div className="space-y-4">
         <p>
-          Understand the 'Why' behind consumer choices. Nexora monitors millions of conversation points across Reddit, Twitter, and niche forums to map emotional connection and brand loyalty.
+          Understand the 'Why' behind consumer choices. Nexora monitors millions of conversation points across X (Twitter) and niche forums to map emotional connection and brand loyalty.
         </p>
         <p>
           For the E-commerce sector, sentiment data revealed that 'Sustainability' is now the #1 driver for Gen Z sportswear purchases, surpassing 'Performance' for the first time in Nike's core demographic.

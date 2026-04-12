@@ -151,7 +151,7 @@ const privacyContent = [
         <div className="grid grid-cols-1 gap-3 mt-6">
           {[
             { t: "Intelligence Query", d: "Submit competitor identities or market niches." },
-            { t: "Autonomous Crawl", d: "Trigger AI swarms across Reddit, G2, and professional reviews." },
+            { t: "Autonomous Crawl", d: "Trigger AI swarms across G2 and professional reviews." },
             { t: "Strategic Synthesis", d: "Generate Weakness Matrices and Opportunity Scores." }
           ].map((item, i) => (
             <div key={i} className="flex gap-4 p-4 rounded-2xl bg-neutral-100/50 dark:bg-neutral-900/50 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm">
