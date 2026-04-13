@@ -13,7 +13,6 @@ import { NavbarDemo } from '@/components/Navbar'
 import { useSubscription } from '@/hooks/useSubscription'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button as ShadButton } from '@/components/ui/button'
-import { DashboardHero } from '@/components/dashboard/DashboardHero'
 import { ExampleBentoGrid } from '@/components/dashboard/ExampleBentoGrid'
 import { BackgroundBeams } from '@/components/ui/aceternity/background-beams'
 import { AnalyzePanel } from '@/components/dashboard/AnalyzePanel'
@@ -482,9 +481,7 @@ export const AnalysisPage: React.FC = () => {
 
       {step === AnalysisStep.IDLE && !searchParams.get('q') ? (
         <>
-          <DashboardHero />
-          <ExampleBentoGrid />
-          <div ref={analyzeSectionRef} id="analysis-search-section" className='relative bg-white dark:bg-black py-24'>
+          <div ref={analyzeSectionRef} id="analysis-search-section" className='relative bg-white dark:bg-black pt-32 pb-24'>
             <div className='absolute inset-0 overflow-hidden'>
               <BackgroundBeams className='absolute inset-0' />
             </div>
@@ -498,6 +495,7 @@ export const AnalysisPage: React.FC = () => {
             {/* Dummy anchor for download-button when no report exists */}
             <div data-tour="download-button" className="absolute top-4 right-4 w-10 h-10 pointer-events-none opacity-0" />
           </div>
+          <ExampleBentoGrid />
           <RecentAnalyses
             analyses={analyses}
             loading={loadingAnalyses}
