@@ -481,7 +481,7 @@ export const AnalysisPage: React.FC = () => {
 
       {step === AnalysisStep.IDLE && !searchParams.get('q') ? (
         <>
-          <div ref={analyzeSectionRef} id="analysis-search-section" className='relative bg-white dark:bg-black pt-32 pb-24'>
+          <div ref={analyzeSectionRef} id="analysis-search-section" className='relative bg-white dark:bg-black pt-32 pb-40'>
             <div className='absolute inset-0 overflow-hidden'>
               <BackgroundBeams className='absolute inset-0' />
             </div>
