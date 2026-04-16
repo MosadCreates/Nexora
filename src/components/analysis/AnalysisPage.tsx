@@ -485,7 +485,7 @@ export const AnalysisPage: React.FC = () => {
             <div className='absolute inset-0 overflow-hidden'>
               <BackgroundBeams className='absolute inset-0' />
             </div>
-            <div className='relative z-30'>
+            <div className='relative z-30 -translate-y-20'>
               <AnalyzePanel
                 onAnalyze={handleAnalyze}
                 disabled={isOutOfCredits}
